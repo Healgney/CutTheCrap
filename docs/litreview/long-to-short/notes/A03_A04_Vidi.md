@@ -1,0 +1,19 @@
+# A03 Vidi (arXiv 2504.15681) and A04 Vidi2.5 (arXiv 2511.19529) -- reading notes
+
+Read: arXiv HTML of both (overview, benchmark definitions, TR/STG result tables, highlight-application paragraph, Vidi-Edit section) + github.com/bytedance/vidi README. Sources: https://arxiv.org/html/2504.15681 ; https://arxiv.org/html/2511.19529 ; https://github.com/bytedance/vidi
+
+## What the Vidi line actually does on clip extraction (question c)
+- [F] Vidi-1 (Apr 2025) is a temporal-retrieval (TR) model: text query (keyword / phrase / sentence; vision-, audio- or mixed-modality) -> time ranges in videos up to >1 h. Visual sampled at 1 fps, audio 16 kHz; decomposed-attention (D-Attn) LLM; two-stage training (multimodal alignment on synthetic then real video with timestamp+caption/ASR pairs; application post-training mirroring VUE-TR). The report positions TR as "a foundational step in video trimming and editing"; it does not define a clip-selection task.
+- [F] Vidi2 / Vidi2.5 add spatio-temporal grounding (STG), video QA, RL with verifiable rewards (Vidi2.5), Think model and VUE-PLOT, and Vidi-Edit (editing-plan generation: narrative structure, voiceover, audio attributes, visual intent). The only statement about highlight extraction is one paragraph: "Given a long raw video, the model can automatically generate multiple highlight segments along with concise titles, allowing users to directly publish the resulting short clips" with a qualitative figure (Fig. 8) and a chapter-summary figure (Fig. 9). No metric, no human study, no benchmark, no baseline for this application [F].
+- [F] README demo has a "Highlight" mode: no query needed, directly outputs a set of highlight clips with title [F as README statement].
+- [I] Therefore, in terms of evidence, Vidi supports "strong long-video timestamp localisation given a query" (RQ3 relevant) and a product-level highlight+title demo, but offers no numbers on engagement, self-containedness, boundary placement relative to sentences/turns, or comparison with human-selected clips.
+
+## Numbers
+- [F] VUE-TR (Vidi-1): 1,598 queries / 428 videos / ~107.87 h, durations from ~20 s to >1 h in five buckets; metrics = AUC of precision / recall / IoU over IoU thresholds. Table 3 overall IoU-AUC (columns Vidi-1.5, Vidi, Gemini-2.0-Flash, Gemini-2.5-Pro, GPT-4o): 39.6, 35.4, 21.2, 15.2, 13.6. P: 55.3/49.0/40.3/39.3/25.9; R: 54.8/52.5/34.6/28.9/24.0. Ultra-short IoU 58.4 (Vidi-1.5).
+- [F] Authors note GPT-4o has no audio input via the Azure API and performs poorly on audio-only queries; for other models audio-query accuracy is "consistently lower" than vision-query accuracy (a statement; per-modality numbers are in the paper's table, not extracted). Gemini evaluated with videos downsized to 256 px due to the 100 MB upload limit.
+- [F] VUE-TR-V2 (Vidi2.5 report): 847 videos / 1,600 queries / 310.72 h, 5 length buckets incl. >60 min (39 videos). Table 8 overall IoU-AUC (Vidi2.5, Vidi2, Gemini 3 Pro Preview, GPT-5) = 49.62, 48.75, 37.58, 17.15 (column order taken from the table header of the sibling Table 6/7 and consistent with text "Vidi2 outperforms Gemini 3 and GPT-5 by >10%" and "Vidi2.5 slightly improved"). For the >60 min bucket IoU = 42.22 (Vidi2.5), 38.65 (Vidi2), 21.19 (Gemini 3), 12.49 (GPT-5) [F].
+- [F] VUE-STG: 982 videos, 204.79 h, 1,600 tubes; vIoU 38.64 (Vidi2.5), 32.57 (Vidi2), 4.61 (Gemini 3), 5.47 (GPT-5), 5.12 (Qwen3-VL-32B).
+
+## Availability
+- [F] github.com/bytedance/vidi: eval scripts for VUE-STG / VUE-TR-V2 / VUE-PLOT, Vidi1.5-9B weights + finetune code (README 2026-01-20 entry). GitHub licence = NOASSERTION; LICENSE file path returned 404 [V]. Annotations are public; videos are YouTube ids fetched with yt-dlp.
+- [V] Whether CapCut / TikTok "long video to shorts" runs on Vidi is not documented in any primary source I could open; one press article claims TikTok Smart Split uses it (secondary, not used as evidence).

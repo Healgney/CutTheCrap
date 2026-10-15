@@ -1,0 +1,24 @@
+# 抽取器阈值集中管理。
+#
+# 重要：以下全部是【起始值，待校准】，不是实测结论。
+# 校准方式见 docs/02-data-pipeline.md 阶段 1：取 50-100 对真实对逐对人工核，
+# 量出每个阈值的 precision 后回填，并在 reports/ 留下校准记录。
+# 先给保守值，宁缺毋滥。
+
+temporal:
+  slope_tolerance: 0.02        # |slope - 1| 上限；超出判为变速，整对丢弃
+  xcorr_min_peak: 0.4          # 音频互相关峰值下限
+
+spatial:
+  ncc_min_peak: 0.55           # NCC 模板匹配峰值下限
+  max_scale: 1.0               # >1 表示短片比源更宽，必然配错，直接丢
+  ratio_tolerance: 0.03        # |估计宽高比 - target| 上限；超出多半是黑边
+  max_rotation_deg: 1.5        # 真裁切无旋转，估出旋转即匹配错误
+
+trajectory:
+  max_jump_px_per_frame: 60    # 逐帧跳变上限
+  smooth_residual_max: 25      # 平滑残差上限；成片段超阈值则丢弃该镜头
+
+filter:
+  text_area_frac_max: 0.15     # 文字/贴纸占比上限
+                               # 超出说明裁切可能在避让文字 = 另一个目标函数，会污染标签

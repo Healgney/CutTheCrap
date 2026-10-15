@@ -1,0 +1,20 @@
+# S1 天然双画幅来源清单（横屏原片 + 竖屏切片）。
+#
+# 命名说明：来源梯队用 S1/S2/S3，避免与三条 thesis 的 T1/T2/T3 撞名。
+#   S1 天然双画幅   —— 时间监督有、空间监督需反推、域宽、许可风险高 [V]
+#   S2 宽视野虚拟机位 —— 空间监督直接记录，配准噪声极低，用作校准集
+#   S3 仅时间监督   —— 学术数据集，许可清晰，单独喂时间分支
+#
+# 合规：只登记 URL + 时间戳，不再分发视频本体。
+# 每条来源都必须能填出 license 与 usage，比赛侧要披露 [F]。
+
+sources: []
+  # - id: example_channel
+  #   tier: S1
+  #   long_form:  { platform: "", handle: "", note: "横屏原片" }
+  #   short_form: { platform: "", handle: "", note: "竖屏切片" }
+  #   pairing_rule: "标题前缀匹配 + 发布时间窗 ±7d"
+  #   target_ratio_wh: [9, 16]
+  #   license: ""        # 必填，不留空
+  #   usage: ""          # 必填：训练 / 评测 / 仅统计
+  #   verified_on: ""    # 核实日期

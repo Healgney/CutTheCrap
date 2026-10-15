@@ -1,0 +1,75 @@
+# Agent D search log (clusters 7 and 8)
+
+Date of run: 2026-10-15. Tools: Bash+curl to arXiv API (export.arxiv.org, relevance sort; rate-limited with HTTP 429 after ~35 calls, then switched), OpenAlex API (api.openalex.org/works?search=..., note: `search=` is full-text-ish and noisy), WebSearch (US-only), WebFetch on arxiv.org/abs, arxiv.org/html, proceedings.neurips.cc, aclanthology.org, frontiersin.org, github.com, research.google. Semantic Scholar was NOT used. Undermind / Elicit / Asta not used (login required).
+
+PDF note: WebFetch could not parse PDFs; the harness auto-saved the binary into its tool-results cache, and I ran `pdftotext` on those cached copies (Mr.HiSum, Joachims 2017, Agarwal 2019, Ai 2018, Wang 2018, Zhan 2022, Wang 2021 clickbait, Hager 2024). No PDF was deliberately downloaded into the project. Text copies live only in the scratchpad.
+
+## A. Queries on "explicit debiasing of Most Replayed / danmaku / view-count labels in highlight or clip selection" (RQ2 novelty core)
+| # | Query | Tool | Result |
+|---|---|---|---|
+| 1 | all:"Most Replayed" | arXiv API | 5 hits: Duico 2023 (2309.06102), TripleSumm (2603.01169), HierSum (2504.18689), Rhapsody (2505.19429), Sahu 2026 (2607.01400). Kept all but HierSum (HierSum text has no bias discussion beyond ">50k views more accurate") |
+| 2 | all:"replay" AND all:"highlight" AND all:bias AND all:video | arXiv API | 0 hits |
+| 3 | all:"unbiased" AND all:"video highlight" | arXiv API | 0 hits |
+| 4 | all:"position bias" AND all:"video highlight" | arXiv API | 0 hits |
+| 5 | all:"popularity bias" AND all:"video highlight" | arXiv API | 0 hits |
+| 6 | all:"debias" AND all:"video moment" AND all:highlight | arXiv API | 0 hits |
+| 7 | all:"audience retention" AND all:video AND all:highlight | arXiv API | 0 hits |
+| 8 | all:"viewer engagement" AND all:"video summarization" AND all:bias | arXiv API | 0 hits |
+| 9 | all:"weak supervision" AND all:"highlight detection" AND all:"view counts" | arXiv API | 0 hits |
+| 10 | all:"noisy" AND all:"user behavior" AND all:"highlight detection" AND all:label | arXiv API | 0 hits |
+| 11 | all:"replay" AND all:heatmap AND all:YouTube | arXiv API | 1 hit: Sahu 2026 |
+| 12 | all:"Mr.HiSum" / all:"Mr. HiSum" | arXiv API | HierSum, TRINITY (2608.29577), TSMD (2609.39051), Aha. TRINITY page checked: no bias discussion of Mr.HiSum labels (frames saliency as perspective-dependent; benchmark for personal-style) |
+| 13 | all:danmaku AND all:highlight; all:"time-sync comments" AND all:highlight | arXiv API | Ping and Chen 2017 (1708.02210) only |
+| 14 | "video highlight detection most replayed label bias debiasing position bias popularity channel thumbnail confound" | WebSearch extended | Surfaced the TripleSumm (App B.2) and Aha statements; no paper doing propensity/IPS/causal debiasing of replay labels. Search summary claimed several things not in sources (e.g. generic recsys results); I only used items I then verified by fetching |
+| 15 | danmaku OR "time-sync comments" video highlight detection bias comment density position bias debiasing | WebSearch standard | Only Ping and Chen 2017; lag calibration is the only correction found |
+| 16 | "Most Replayed" spike first seconds bias | WebSearch standard | No new source (the spike statement was located by fetching TripleSumm and Rhapsody) |
+| 17 | debiasing replay statistics video highlight; time-sync comments highlight extraction video; danmaku video highlight detection; bullet comments video highlight bias; highlight detection implicit user feedback bias noisy labels video; video highlight dataset selection bias creator-selected clips; causal video highlight detection debiasing; replay graph podcast highlight YouTube; Mr. HiSum most replayed label noise; highlight detection most replayed supervision limitation proxy engagement | OpenAlex | Found older time-sync comment highlight papers (Video Highlight Shot Extraction with Time-Sync Comment 2015 DOI 10.1145/2757513.2757516; Reading the Videos AAAI 2016; Bridging Video Content and Comments AAAI 2017) - titles only, not opened, lead for danmaku density (cluster 2 owner); CHI 2025 Most Replayed paper (title/DOI confirmed). Nothing on debiasing |
+| 18 | Direct read of seeds for bias handling: HIVE (2507.02790), SVHighlights (2606.06926), Repurpose-10K (2412.08879) | WebFetch (HTML) | None of the three analyses or corrects label bias. HIVE labels = viewer study + expert edits; SVHighlights labels = official highlight videos (view filter >10k only); Repurpose-10K: LLM repurposing tools propose candidate clips and users pick/refine, but selection effect is not analysed |
+| 19 | Generating Highlight Videos of a User-Specified Length using Most Replayed Data (CHI 2025) | WebSearch, WebFetch | ACM page returned 403; only third-party abstract snippet. Bias handling NOT verified [V] |
+
+## B. Queries for click models / counterfactual LTR / popularity bias (cluster 7)
+| # | Query | Tool | Result |
+|---|---|---|---|
+| 20 | all:"counterfactual learning to rank" AND all:"position bias" AND all:propensity | arXiv API | 8 hits (e.g. 2005.10615, 2108.08538 mixture-based correction for position and trust bias, 2008.10242 affine corrections) - listed as leads, not read |
+| 21 | all:"duration bias" AND all:"watch time" | arXiv API | D2Q 2206.06003 (read), 2406.07932 counterfactual watch time, 2208.05190 DVR, 2308.08120, 2504.07575, 2503.06920 AlignPxtr (leads, not read) |
+| 22 | all:clickbait AND all:counterfactual AND all:recommendation | arXiv API | 2009.09945 (read) |
+| 23 | unbiased learning to rank position bias | OpenAlex | Wang 2018 WSDM (DOI 10.1145/3159652.3159732), Joachims 2017, Unbiased LambdaMART (1809.05818, lead, not included), Doubly Robust ULTR (TOIS 2022, lead) |
+| 24 | Direct abs fetch: 1812.05161, 1804.05938, 2404.02543, 2207.03051, 2105.06067, 2010.03240, 1602.05352, 2009.09945 | WebFetch | verified titles/authors/dates |
+| 25 | video summarization view count popularity bias; popularity bias micro-video highlight | OpenAlex | popularity-bias surveys (UMUAI 2024 DOI 10.1007/s11257-024-09406-0, lead), Alleviating Video-length Effect for Micro-video Recommendation (TOIS 2023, lead) |
+| 26 | uncovering hidden challenges in query-based video moment retrieval; temporal grounding dataset bias moment prior debiasing | OpenAlex | Otani et al. BMVC 2020 (DOI 10.5244/c.34.84) and "Towards Debiasing Temporal Sentence Grounding in Video" (2111.04321), "Deconfounded Video Moment Retrieval with Causal Intervention" (SIGIR 2021, DOI 10.1145/3404835.3462823): relevant for position-prior bias in annotation but NOT opened -> leads [V] for the cluster 3/6 owners |
+| 27 | click model video watch behavior skip replay implicit feedback | OpenAlex | SWaT (WSDM-adjacent, DOI 10.1145/3690624.3709415) and "Relative Advantage Debiasing for Watch-Time Prediction" (AAAI 2026) - leads, not opened |
+| NOT DONE | Classic click-model papers (Craswell 2008 cascade, Chapelle and Zhang 2009 DBN, Dupret and Piwowarski UBM, Chuklin et al. book) | - | No arXiv versions; not retrieved. Their ideas are cited inside Ai 2018 / Wang 2018 / Joachims 2017 (which I read) |
+
+## C. Queries for cluster 8 (short-video engagement / popularity)
+| # | Query | Tool | Result |
+|---|---|---|---|
+| 28 | all:VQualA; all:SnapUGC; all:"VQualA" AND engagement; all:"short video" AND all:"engagement prediction" | arXiv API | 2509.02969 (challenge report), 2508.02516 (winner), 2410.00289 (SnapUGC); other VQualA 2025 hits are face-IQA/SR-IQA/LMM-comparison tracks (irrelevant) |
+| 29 | all:"engagement" AND all:Snapchat AND all:video | arXiv API | SnapUGC; 2607.28895 LLM-Based Generative Retrieval for Snapchat (recsys, not relevant) |
+| 30 | all:"video popularity prediction" AND all:multimodal | arXiv API | 2003.12724 (2020 micro-video MVED, lead), 2507.00950 MVP (read) |
+| 31 | "short video engagement prediction content"; "video popularity prediction thumbnail title confound causal"; "YouTube video views thumbnail title effect causal experiment"; "causal inference popularity prediction social media content creator confounding" | OpenAlex | Found Douyin hooks null-result paper (read), LLM popularity (ACL Findings, abstract), IMCL-DAMO not on arXiv; MMF-QE (ICCVW DOI 10.1109/iccvw69036.2025.00366) exists but no accessible text -> not included; SmartEdit (ICME 2025) lead; "Catchy or Sketchy? thumbnail-title congruence" (SSRN 2026) lead, social-science, not opened |
+| 32 | MMF-QE ...; IMCL-DAMO ... | WebSearch | Not found as arXiv; only DOI-level confirmation of MMF-QE. IMCL-DAMO method taken from the challenge report's table only |
+| 33 | all:"Twitch" AND all:clips; livestream highlight chat viewer clip creation bias; Twitch clips popularity prediction | arXiv API, OpenAlex | 1910.12201 (Implicit crowdsourcing highlights from recorded live videos, ICDE 2020 DOI 10.1109/ICDE48307.2020.00176: cluster 2 lead) and 2026 LLM Twitch clip summarisation (DOI 10.1145/3789624.3789641: lead). No bias analysis of clip-creation selection found |
+
+## D. Explicit "not found" statements
+- Propensity/IPS/counterfactual debiasing applied to Most Replayed, danmaku density or clip view count labels in the highlight/summarization/clip-extraction literature: NOT FOUND with queries 1-19 (arXiv API, OpenAlex, WebSearch). Absence is not proof; arXiv API phrase search was patchy (many AND-phrase queries returned 0), so queries should be re-run with Semantic Scholar once the rate limit allows.
+- Title/thumbnail effect and channel-popularity adjustment in highlight/clip label construction: NOT FOUND (only Rhapsody's channel/playlist filtering and Aha/Mr.HiSum view-count thresholds, which are filters, not adjustments).
+- Candidate-tool selection bias (clips can only be chosen among tool-proposed candidates): NOT FOUND as an analysed bias. Repurpose-10K's pipeline has this structure but does not analyse it.
+- Danmaku: only 2017 lag-calibration; no density position bias paper found.
+- Mr.HiSum labels: bias analysis exists only inside the original paper (limitations paragraph) plus indirect treatments in TripleSumm, Rhapsody, Sahu 2026, Aha.
+
+## E. Deep-read phase additions (RQ2 novelty re-check, forward citations; run after the coordinator's request)
+
+Tools this phase: Semantic Scholar Graph API (citations endpoint worked intermittently with >=9-15 s spacing and retries; the /paper/search endpoint was 429 almost every time), OpenAlex (free daily budget exhausted mid-session: "Insufficient budget", resets at midnight UTC, so later OpenAlex lookups failed), Crossref API, GitHub API/raw README, arXiv HTML (read locally via curl + tag stripping), WebFetch (hit a session limit once, then recovered).
+
+| # | Query / action | Tool | Result |
+|---|---|---|---|
+| 34 | Forward citations of Mr.HiSum (S2 id via DOI 10.52202/075280-1764), about 35 citing papers returned by S2 with titles/abstracts keyword-screened (debias, propensity, counterfactual, causal, confound, noisy label, calibrat, replay, danmaku, popularity, thumbnail, clickbait) | Semantic Scholar | Citing titles include LOGA, TSMD, SGWIB, MCHD, TRINITY, HABSS, Language-guided personalized summarization, SVHighlights, FSDD joint MR/HD, keyframe extraction, HAVEN, PivotSketch, Video plot segmentation, Twitch clip LLM summarisation, TripleSumm, HiVid, Sounding Highlights, TSTN, MediaPot, SummDiff, SD-MVSum, Aha, Spatial-Perceptual highlight model, domain-adaptive summarisation, AViLA, Unsupervised Transcript-assisted summarisation, HierSum, CHI 2025 Most Replayed paper, Video Summarization with LLMs, E.T. Bench, Sportoonizer, Localizing Events with Multimodal Queries, language-guided self-supervised summarisation, Non-Event Oriented Video Assessments. I read the abstracts of 9 of them (TSMD, SGWIB, Language-guided, PivotSketch, Twitch LLM clips, HiVid, Sounding Highlights, SummDiff, Transcript-assisted; TRINITY and TripleSumm were read earlier): NONE addresses debiasing, propensity, causal adjustment or calibration of Most Replayed / comment / view-count labels. (Abstract not available from S2 for LOGA, MCHD, Video plot segmentation, Non-Event Oriented: titles only [V].) Keyword hits were false positives (SGWIB "bias" = information-bottleneck context; PivotSketch "calibrat" = streaming control). |
+| 35 | Forward citations of Rhapsody (ARXIV:2505.19429) | Semantic Scholar | 1 citing paper: "Benchmarking NLP Paradigms for Livestream Transcript Highlight Detection" (2025) - abstract not retrieved [V]; title suggests transcript-based highlight detection benchmark (cluster 4 lead); no debiasing in title |
+| 36 | Forward citations of Aha (ARXIV:2509.16421) | Semantic Scholar | 3: SGWIB, TRINITY, Non-Event Oriented Video Assessments in Long-Form Robot Videos; none about label debiasing |
+| 37 | Forward citations of TripleSumm (ARXIV:2603.01169) | Semantic Scholar | 2: TSMD, SGWIB; neither about label bias (TSMD: modality-missingness and loss misalignment with peak-driven highlights) |
+| 38 | Forward citations of SVHighlights (ARXIV:2606.06926) | Semantic Scholar | 0 returned (new paper) |
+| 39 | Forward citations via OpenAlex (cites: filter) for Mr.HiSum / Rhapsody / TripleSumm / Aha / SVHighlights | OpenAlex | Mr.HiSum 7 (subset of #34: Twitch LLM, Sounding Highlights, keyframe extraction, HABSS, Test-Time Counterfactual Calibration for Hallucination-Resistant Temporal Grounding, MCHD, LOGA); others 0. The "Counterfactual Calibration" hit concerns hallucination in temporal grounding, not label bias (title-level screen only [V]) |
+| 40 | CHI 2025 paper "Generating Highlight Videos of a User-Specified Length using Most Replayed Data": Crossref (authors Minsun Kim, Dawon Lee, Junyong Noh; licence CC BY-NC-ND 4.0), Semantic Scholar (abstract; DBLP conf/chi/KimLN25; openAccessPdf points to publisher DOI), ACM DL pdf via curl (403 Cloudflare challenge), arXiv API title query (no arXiv version found), web search for author/project page (no result) | Crossref, S2, curl, arXiv | Abstract only. Full text NOT read. Abstract does not mention bias handling (it only says Most Replayed Data gauges the most engaging parts and an editing path is optimised). Whether the full paper treats the initial spike or other biases is [V]. |
+| 41 | S2 /paper/search queries ("debiasing most replayed video highlight", "inverse propensity weighting video highlight detection engagement labels", "position bias replay statistics video", "danmaku highlight detection bias", "clip popularity prediction long video podcast highlights views") | Semantic Scholar | Only the third returned (irrelevant results); the rest 429 after retries. Not a negative finding; to be re-run [V] |
+
+Conclusion of the re-check: still NOT FOUND - no paper applying propensity/IPS/causal debiasing to Most Replayed, danmaku or view-count labels for highlight/summary/clip selection, among the forward citations of the five anchor papers (Mr.HiSum fully screened; others small) and the earlier keyword searches. Remaining blind spots: papers that do not cite these anchors; S2 search endpoint; CHI 2025 full text.

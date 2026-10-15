@@ -1,0 +1,704 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>双目标侧重决策</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&family=Noto+Sans+SC:wght@400;500;700&display=swap">
+<style>
+/* ---------- reset ---------- */
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;scroll-behavior:smooth}
+body,h1,h2,h3,h4,p,ul,ol,li,figure,table,blockquote,dl,dd{margin:0;padding:0}
+ul,ol{list-style:none}
+table{border-collapse:collapse;border-spacing:0}
+img,svg{display:block;max-width:100%}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+
+/* ---------- tokens ---------- */
+:root{
+  --ground:#F1F3F2;
+  --surface:#FBFCFB;
+  --surface-2:#E7EAE9;
+  --line:#D4D9D8;
+  --line-strong:#B3BBBA;
+  --ink:#15191A;
+  --ink-2:#3F4749;
+  --ink-3:#6B7476;
+  --accent:#1D5F5E;
+  --accent-soft:#DBE8E6;
+  --on-accent:#FBFCFB;
+  --warn:#87590F;
+  --warn-soft:#EFE5D0;
+  --risk:#9A3822;
+  --risk-soft:#F1DDD7;
+  --infer:#484B78;
+  --infer-soft:#E0E1EE;
+  --shadow:0 1px 2px rgba(16,24,24,.05), 0 8px 24px -16px rgba(16,24,24,.28);
+  --serif:"Newsreader","Noto Serif SC",Georgia,"Songti SC","Microsoft YaHei",serif;
+  --sans:"IBM Plex Sans","Noto Sans SC","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+  --mono:"IBM Plex Mono","Noto Sans SC",ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --ground:#101413; --surface:#171C1B; --surface-2:#1F2524;
+    --line:#2C3433; --line-strong:#3F4847;
+    --ink:#E6EAE9; --ink-2:#AEB6B5; --ink-3:#7C8685;
+    --accent:#5FB8AF; --accent-soft:#16302E; --on-accent:#0F1413;
+    --warn:#D2A05C; --warn-soft:#2C2417;
+    --risk:#D97A5F; --risk-soft:#2E1B15;
+    --infer:#9B9CD2; --infer-soft:#1D1F30;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px -16px rgba(0,0,0,.8);
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#101413; --surface:#171C1B; --surface-2:#1F2524;
+  --line:#2C3433; --line-strong:#3F4847;
+  --ink:#E6EAE9; --ink-2:#AEB6B5; --ink-3:#7C8685;
+  --accent:#5FB8AF; --accent-soft:#16302E; --on-accent:#0F1413;
+  --warn:#D2A05C; --warn-soft:#2C2417;
+  --risk:#D97A5F; --risk-soft:#2E1B15;
+  --infer:#9B9CD2; --infer-soft:#1D1F30;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px -16px rgba(0,0,0,.8);
+}
+
+/* ---------- base ---------- */
+body{
+  background:var(--ground);
+  color:var(--ink);
+  font-family:var(--sans);
+  font-size:16px;
+  line-height:1.75;
+  letter-spacing:.005em;
+}
+.wrap{max-width:1200px;margin:0 auto;padding:0 clamp(20px,4vw,48px)}
+::selection{background:var(--accent-soft);color:var(--ink)}
+a{color:var(--accent);text-underline-offset:3px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:2px}
+
+/* ---------- masthead ---------- */
+.masthead{border-bottom:1px solid var(--line);padding:clamp(28px,5vw,56px) 0 clamp(24px,4vw,40px)}
+.masthead-top{display:flex;align-items:flex-start;justify-content:space-between;gap:24px;flex-wrap:wrap}
+.mark{display:flex;align-items:center;gap:14px;color:var(--accent)}
+.mark svg{flex:none}
+.eyebrow{
+  font-family:var(--mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--ink-3);line-height:1.6;
+}
+h1{
+  font-family:var(--serif);font-weight:600;
+  font-size:clamp(30px,5.2vw,50px);line-height:1.14;letter-spacing:-.015em;
+  text-wrap:balance;margin-top:22px;max-width:20ch;
+}
+.standfirst{
+  font-family:var(--serif);font-size:clamp(16px,2vw,19px);line-height:1.62;
+  color:var(--ink-2);max-width:62ch;margin-top:16px;
+}
+.meta-row{
+  display:flex;flex-wrap:wrap;gap:8px 22px;margin-top:26px;
+  font-family:var(--mono);font-size:11.5px;letter-spacing:.05em;color:var(--ink-3);
+}
+.meta-row b{color:var(--ink-2);font-weight:500}
+.theme-toggle{
+  font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--ink-3);border:1px solid var(--line);border-radius:999px;padding:6px 13px;
+  transition:border-color .15s,color .15s;white-space:nowrap;
+}
+.theme-toggle:hover{border-color:var(--line-strong);color:var(--ink)}
+
+/* ---------- layout ---------- */
+.shell{display:block;padding-bottom:20px}
+.rail{display:none}
+@media (min-width:1080px){
+  .shell{display:grid;grid-template-columns:190px minmax(0,1fr);gap:clamp(32px,5vw,72px);align-items:start}
+  .rail{display:block;position:sticky;top:32px;padding-top:60px}
+}
+.rail-title{font-family:var(--mono);font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-3);padding-bottom:12px;border-bottom:1px solid var(--line)}
+.rail ol{display:flex;flex-direction:column;margin-top:10px}
+.rail a{
+  display:grid;grid-template-columns:26px 1fr;gap:6px;align-items:baseline;
+  padding:7px 0;color:var(--ink-2);text-decoration:none;font-size:13.5px;line-height:1.45;
+  transition:color .15s;
+}
+.rail a:hover{color:var(--accent)}
+.rail .n{font-family:var(--mono);font-size:10.5px;color:var(--ink-3);letter-spacing:.04em}
+
+/* ---------- sections ---------- */
+section{padding-top:clamp(48px,6vw,80px);scroll-margin-top:24px}
+.sec-head{display:flex;align-items:baseline;gap:14px;border-top:2px solid var(--ink);padding-top:14px;margin-bottom:24px}
+.sec-n{font-family:var(--mono);font-size:12px;letter-spacing:.1em;color:var(--accent);font-weight:500;flex:none}
+h2{font-family:var(--serif);font-weight:600;font-size:clamp(22px,3.2vw,31px);line-height:1.2;letter-spacing:-.01em;text-wrap:balance}
+h3{
+  font-family:var(--sans);font-weight:600;font-size:15.5px;letter-spacing:.01em;
+  margin-top:38px;margin-bottom:12px;color:var(--ink);
+  display:flex;align-items:center;gap:10px;
+}
+h3::before{content:"";width:14px;height:1.5px;background:var(--accent);flex:none}
+h4{font-family:var(--mono);font-size:11.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--ink-3);margin-top:28px;margin-bottom:10px;font-weight:500}
+p{margin-top:14px;max-width:70ch}
+strong{font-weight:600;color:var(--ink)}
+em{font-style:italic;font-family:var(--serif);font-size:1.03em}
+code{font-family:var(--mono);font-size:.88em;background:var(--surface-2);padding:1px 5px;border-radius:3px;color:var(--ink)}
+
+/* lists */
+.list{margin-top:14px;max-width:70ch;display:flex;flex-direction:column;gap:9px}
+.list li{position:relative;padding-left:20px;color:var(--ink-2)}
+.list li::before{content:"";position:absolute;left:2px;top:.68em;width:5px;height:5px;border:1px solid var(--line-strong)}
+.list.num{counter-reset:li}
+.list.num li{padding-left:28px;counter-increment:li}
+.list.num li::before{
+  content:counter(li,decimal-leading-zero);border:0;
+  font-family:var(--mono);font-size:11px;color:var(--accent);top:.05em;left:0;width:auto;height:auto;letter-spacing:.03em;
+}
+.list li strong{color:var(--ink)}
+
+/* ---------- fact badges ---------- */
+.tag{
+  display:inline-flex;align-items:center;
+  font-family:var(--mono);font-size:10.5px;font-weight:500;letter-spacing:.06em;
+  padding:0 5px;border-radius:3px;vertical-align:.1em;white-space:nowrap;line-height:1.65;
+}
+.tag-f{background:var(--accent);color:var(--on-accent);border:1px solid var(--accent)}
+.tag-i{background:var(--infer-soft);color:var(--infer);border:1px solid var(--infer)}
+.tag-v{background:transparent;color:var(--warn);border:1px dashed var(--warn)}
+.legend{
+  display:flex;flex-wrap:wrap;gap:10px 26px;margin-top:22px;padding:15px 18px;
+  background:var(--surface);border:1px solid var(--line);border-radius:6px;
+}
+.legend div{display:flex;align-items:baseline;gap:9px;font-size:13px;color:var(--ink-2)}
+
+/* ---------- verdict ---------- */
+.verdict{
+  margin-top:clamp(28px,4vw,44px);padding:clamp(22px,3.4vw,34px);
+  background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--accent);
+  border-radius:4px;box-shadow:var(--shadow);
+}
+.verdict h4{margin-top:0}
+.verdict p{font-family:var(--serif);font-size:clamp(16px,2.1vw,19.5px);line-height:1.6;color:var(--ink);max-width:64ch}
+
+/* callouts */
+.note{
+  margin-top:20px;padding:15px 20px;border-radius:4px;font-size:14.5px;line-height:1.68;
+  background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--line-strong);
+  color:var(--ink-2);max-width:72ch;
+}
+.note p{margin-top:10px;font-size:14.5px}
+.note p:first-of-type{margin-top:0}
+.note.risk{border-left-color:var(--risk);background:var(--risk-soft);border-color:var(--risk-soft)}
+.note.risk strong{color:var(--risk)}
+.note.check{border-left-color:var(--warn);background:var(--warn-soft);border-color:var(--warn-soft)}
+.note.check strong{color:var(--warn)}
+.note .lbl{font-family:var(--mono);font-size:10.5px;letter-spacing:.13em;text-transform:uppercase;display:block;margin-bottom:6px;color:var(--ink-3)}
+.note.risk .lbl{color:var(--risk)}
+.note.check .lbl{color:var(--warn)}
+
+/* ---------- derivation ---------- */
+.deriv{margin-top:22px;border:1px solid var(--line);border-radius:6px;overflow:hidden;background:var(--surface)}
+.deriv-h{
+  padding:10px 18px;border-bottom:1px solid var(--line);background:var(--surface-2);
+  font-family:var(--mono);font-size:10.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--ink-3);
+}
+.deriv-b{padding:24px 18px;overflow-x:auto}
+.eq{
+  font-family:var(--mono);font-size:14.5px;line-height:2.15;color:var(--ink);
+  white-space:nowrap;text-align:center;font-variant-numeric:tabular-nums;
+}
+.eq .op{color:var(--accent)}
+.eq-note{font-size:12.5px;color:var(--ink-3);text-align:center;margin-top:12px;white-space:nowrap;font-family:var(--mono)}
+
+/* ---------- tables ---------- */
+.tbl-wrap{margin-top:22px;overflow-x:auto;border:1px solid var(--line);border-radius:6px;background:var(--surface)}
+table{width:100%;min-width:660px;font-size:14px;line-height:1.62}
+thead th{
+  text-align:left;vertical-align:bottom;padding:13px 16px;
+  font-family:var(--mono);font-size:10.5px;letter-spacing:.11em;text-transform:uppercase;font-weight:500;
+  color:var(--ink-3);background:var(--surface-2);border-bottom:1px solid var(--line-strong);
+}
+tbody td,tbody th{padding:14px 16px;vertical-align:top;border-bottom:1px solid var(--line);color:var(--ink-2)}
+tbody tr:last-child td,tbody tr:last-child th{border-bottom:0}
+tbody th{text-align:left;font-weight:600;color:var(--ink)}
+td strong,th strong{color:var(--ink);font-weight:600}
+.matrix table{min-width:900px}
+.matrix thead th:first-child,.matrix tbody th{width:150px}
+.matrix tbody th{
+  font-family:var(--mono);font-size:11px;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--ink-3);font-weight:500;
+}
+.rec{color:var(--accent);font-weight:600}
+.tbl-cap{font-size:12.5px;color:var(--ink-3);margin-top:10px;font-family:var(--mono);letter-spacing:.02em;max-width:72ch;line-height:1.7}
+
+/* strategy blocks */
+.strat{margin-top:26px}
+.strat-item{border-top:1px solid var(--line);padding:20px 0}
+.strat-item:first-child{border-top:1px solid var(--line-strong)}
+.strat-name{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:4px}
+.strat-name .k{font-family:var(--mono);font-size:12px;color:var(--accent);letter-spacing:.09em;flex:none}
+.strat-name .t{font-weight:600;font-size:16px;color:var(--ink)}
+
+/* ---------- checklist ---------- */
+.ask{margin-top:20px;counter-reset:q;max-width:76ch}
+.ask li{
+  counter-increment:q;display:grid;grid-template-columns:32px 1fr;gap:12px;
+  padding:13px 0;border-bottom:1px solid var(--line);color:var(--ink-2);font-size:14.5px;line-height:1.65;
+}
+.ask li:first-child{border-top:1px solid var(--line-strong)}
+.ask li::before{
+  content:"Q" counter(q);font-family:var(--mono);font-size:11px;color:var(--ink-3);
+  letter-spacing:.04em;padding-top:.3em;
+}
+.ask li strong{color:var(--ink)}
+.ask.alt li::before{content:"R" counter(q)}
+
+/* ---------- footer ---------- */
+footer{border-top:1px solid var(--line);margin-top:clamp(56px,7vw,90px);padding:26px 0 44px}
+.foot-in{
+  display:flex;flex-wrap:wrap;gap:12px 32px;justify-content:space-between;align-items:baseline;
+  font-family:var(--mono);font-size:11.5px;letter-spacing:.05em;color:var(--ink-3);
+}
+
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  *{animation-duration:.01ms !important;transition-duration:.01ms !important}
+}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+<header class="masthead">
+  <div class="masthead-top">
+    <div class="mark">
+      <svg width="42" height="30" viewBox="0 0 42 30" fill="none" aria-hidden="true">
+        <rect x="0.7" y="0.7" width="40.6" height="28.6" rx="1" stroke="currentColor" stroke-opacity=".28" stroke-width="1.2"/>
+        <rect x="8" y="4.4" width="13.5" height="21.2" rx="0.6" stroke="currentColor" stroke-width="1.5"/>
+        <rect x="25.5" y="9.2" width="11.5" height="11.5" rx="0.6" stroke="currentColor" stroke-opacity=".5" stroke-width="1.2" stroke-dasharray="3 2.5"/>
+      </svg>
+      <span class="eyebrow">决策简报 · 独立批判性分析<br>视频高光剪辑项目</span>
+    </div>
+    <button class="theme-toggle" id="tt" type="button" aria-label="切换深浅色主题">切换主题</button>
+  </div>
+  <h1>参赛与 ICLR 双目标的侧重决策</h1>
+  <p class="standfirst">本文不假设两个目标天然兼容。赛题原文未写明的内容一律标为待核实，不做补写与猜测；不虚构任何 deadline、榜单数据、算力或实验结果。</p>
+  <div class="meta-row">
+    <span><b>事实边界</b>　简报第 2 部分</span>
+    <span><b>硬约束</b>　「未公开发表」条款未定义</span>
+    <span><b>建议</b>　见 06</span>
+  </div>
+</header>
+
+<div class="shell">
+  <nav class="rail" aria-label="目录">
+    <div class="rail-title">目录</div>
+    <ol>
+      <li><a href="#matrix"><span class="n">—</span><span>决策矩阵</span></a></li>
+      <li><a href="#s1"><span class="n">01</span><span>两个目标在优化什么</span></a></li>
+      <li><a href="#s2"><span class="n">02</span><span>三种策略</span></a></li>
+      <li><a href="#s3"><span class="n">03</span><span>共用与分叉</span></a></li>
+      <li><a href="#s4"><span class="n">04</span><span>Hostile Reviewer</span></a></li>
+      <li><a href="#s5"><span class="n">05</span><span>公开发表条款</span></a></li>
+      <li><a href="#s6"><span class="n">06</span><span>建议与反转规则</span></a></li>
+    </ol>
+  </nav>
+
+  <main>
+
+  <!-- ===== 结论前置 ===== -->
+  <section id="top" style="padding-top:clamp(30px,4vw,50px)">
+    <div class="verdict">
+      <h4>结论前置</h4>
+      <p>在「未公开发表」条款获得组委会书面解释之前，任何论文主导路线都是在一个<strong>不可撤回</strong>的赌注上加杠杆——arXiv 与 OpenReview 公开都无法回滚。同时，「联合高光选择 + 逐帧构图」以目前的形态<strong>不足以</strong>成为 ICLR 贡献：它与 STVG 的输出签名完全同构。我的建议是策略 C 的一个变体，但有一处必须提前。</p>
+    </div>
+    <div class="legend">
+      <div><span class="tag tag-f">F</span><span>已由附件确认的事实</span></div>
+      <div><span class="tag tag-i">I</span><span>我的推断，可被证伪</span></div>
+      <div><span class="tag tag-v">V</span><span>待核实，我不替你补写</span></div>
+    </div>
+  </section>
+
+  <!-- ===== 决策矩阵 ===== -->
+  <section id="matrix">
+    <div class="sec-head"><span class="sec-n">MATRIX</span><h2>决策矩阵</h2></div>
+    <div class="tbl-wrap matrix">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col"></th>
+            <th scope="col">A · 比赛主导</th>
+            <th scope="col">B · 论文主导</th>
+            <th scope="col">C · 共同底座后分叉</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th scope="row">成立前提<br>须同时为真</th>
+            <td>① 榜单允许高频提交、工程迭代能转化为名次 <span class="tag tag-v">V</span><br>② 分差由工程而非想法决定 <span class="tag tag-v">V</span><br>③ 你接受论文降级为系统／实证研究，或延后一轮<br>④ 若条款从严，本策略是被迫的唯一解</td>
+            <td>① 条款确认宽松，或你接受放弃比赛<br>② 存在合法、可描述、可发布的训练与评测数据（<strong>不含赛方测试集</strong>）<br>③ 交互效应在早期 pilot 中存活<br>④ 有多参考标注的人力</td>
+            <td>① 底座接口在建设期即冻结（同一 I/O 契约）<br>② 有能力同时维护两套评测 harness<br>③ Gate 的日期与判据在开工前写死<br>④ 分叉后两条线的算力互不挤占 <span class="tag tag-v">V</span></td>
+          </tr>
+          <tr>
+            <th scope="row">最可能的<br>失败方式</th>
+            <td>拿到中游名次，论文被评为「已有模块的工程组合」；且最强证据全部落在一个<strong>你无权描述的测试集</strong>上，无法进论文。</td>
+            <td>pilot 证伪交互效应时，工程线已被荒废 → 两头皆空。或做出一个被称作「STVG 的换皮重标注」的基准。</td>
+            <td>Gate 从不触发，分叉永不发生；或底座为通用性过度设计，同时拖慢两条线。</td>
+          </tr>
+          <tr>
+            <th scope="row">最晚<br>转向信号</th>
+            <td>连续两个迭代周期的榜单工作<strong>产出不了任何可写进论文的消融</strong>——不是分数不涨，是「涨了但说不清为什么」。</td>
+            <td>croppability-blind 消融（见 <a href="#s4">04 · Control C</a>）在自建 dev 集上无可测差异。该实验必须排在架构设计<strong>之前</strong>。</td>
+            <td>到 Gate 日仍未同时具备：(a) 端到端合法提交、(b) 自建 dev 集上跑通的本地评测 → 立即坍缩为 A。</td>
+          </tr>
+          <tr>
+            <th scope="row">当前信息下<br>的推荐度</th>
+            <td>条款从严时的<strong>唯一解</strong></td>
+            <td>现阶段不推荐<br>前提 ①② 均未确认</td>
+            <td class="rec">推荐，但需前移数据分叉</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="tbl-cap">矩阵回答的是「在什么条件下成立」，不是排序。条款结果一旦返回，推荐列会立即重排——反转规则见 06。</p>
+  </section>
+
+  <!-- ===== 01 ===== -->
+  <section id="s1">
+    <div class="sec-head"><span class="sec-n">01</span><h2>两个目标真正在优化什么</h2></div>
+
+    <h3>比赛的目标函数可以闭式化</h3>
+    <p>附件对指标的描述 <span class="tag tag-f">F</span>：同帧计算预测框与真值框 IoU，IoU 总和分别除以预测数与真标注数得 P／R，再取 F1。把它写开 <span class="tag tag-i">I</span>：设 G 为真值高光帧集合，P 为预测帧集合，令 S 为交集上 IoU 之和，则</p>
+
+    <div class="deriv">
+      <div class="deriv-h">指标的闭式形式 · 由附件转述推导</div>
+      <div class="deriv-b">
+        <div class="eq">S <span class="op">=</span> &Sigma;<sub>f&thinsp;&isin;&thinsp;P&thinsp;&cap;&thinsp;G</sub> iou<sub>f</sub></div>
+        <div class="eq">Precision <span class="op">=</span> S / |P|　　Recall <span class="op">=</span> S / |G|</div>
+        <div class="eq" style="font-size:17px;padding-top:6px">F1 <span class="op">=</span> 2S / ( |P| <span class="op">+</span> |G| )</div>
+        <div class="eq-note">即一个 soft-Dice。分母不含交集项，这是全部后果的来源。</div>
+      </div>
+    </div>
+
+    <ul class="list num">
+      <li><strong>多预测一个不在 G 中的帧，永远有害。</strong>分子不变、分母加一。</li>
+      <li><strong>多预测一个在 G 中的帧，当且仅当其 IoU 大于当前 F1 的一半时有益。</strong>推导：2(S+u)/(D+1) &gt; 2S/D ⟺ D·u &gt; S ⟺ u &gt; S/D = F1/2。</li>
+      <li>因此最优决策规则是对<strong>期望 IoU</strong> 取阈值：E[u] = P(f∈G) × E[iou | f∈G] &gt; f*/2。这是一个分式规划，可用 Dinkelbach 迭代求解，阈值与最终得分互为不动点。</li>
+    </ul>
+
+    <div class="note risk">
+      <span class="lbl">这条推导对你的决策至关重要</span>
+      <p>赛题指标<strong>本身就要求联合决策</strong>：一个真高光帧，若你构不出好框，就应主动丢弃。也就是说，你想论证的「联合性」在比赛里是<strong>指标诱导的</strong>，不是任务本性诱导的。这既是最大的复用机会，也是论文最大的陷阱——见 <a href="#s4">04</a>。</p>
+    </div>
+
+    <div class="note check">
+      <span class="lbl">必须读官方评测脚本确认 · 不要靠推断</span>
+      <p>|G|=0 且 |P|=0 时的除零处理；重复帧是否计入 |P|；越界框是判 0 分还是整卷无效。 <span class="tag tag-v">V</span></p>
+    </div>
+
+    <p><strong>第二个结构性推断</strong> <span class="tag tag-i">I</span>：当高光帧在长视频中稀疏时，分母由 |P| 主导，<strong>时间选择是一阶项、构图 IoU 是二阶乘子</strong>；但目标画幅为 9:16 而源为横屏时，裁切窗极窄，IoU 对 x 位置高度敏感，构图项重新上升为主导。所以「时间选择和构图哪个更重要」没有统一答案，取决于 <strong>9:16 样本占比</strong> 与 <strong>高光帧稀疏度</strong> <span class="tag tag-v">V</span>。这是最小证据包里应该第一个测出来的两个数。</p>
+
+    <h3>ICLR 的目标函数</h3>
+    <p>ICLR 优化的不是分数，是<strong>因果归因的可信度</strong>：一个可被证伪的 claim，加上「排除了所有其他解释」的证据链。分数只在该分数<em>唯一地</em>支持你的 claim 时才有价值。</p>
+
+    <h3>真正一致的部分</h3>
+    <p>不多，但很实：长视频采样与解码效率；主体／显著性定位质量；跨帧平滑；以及上面推出的<strong>预算化选择规则</strong>——它同时是榜单资产和一个可形式化的方法论点。</p>
+
+    <h3>结构性冲突：不是可协调的取舍，是定义上互斥</h3>
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr><th scope="col">冲突</th><th scope="col">比赛要求</th><th scope="col">论文要求</th><th scope="col">为何不可调和</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th scope="row">评测集</th>
+            <td>测试集不可上传、不可传播、不可人工标注 <span class="tag tag-f">F</span></td>
+            <td>结果需可复核，需定性样例与误差分析</td>
+            <td>你<strong>不能</strong>在论文里展示测试集样例、统计或误差图。能否报告聚合分数亦 <span class="tag tag-v">V</span></td>
+          </tr>
+          <tr>
+            <th scope="row">真值唯一性</th>
+            <td>单一 GT 构图框，IoU 硬比 <span class="tag tag-f">F</span></td>
+            <td>构图是审美任务，合理解不唯一</td>
+            <td>论文必须做多参考／acceptable-set 或人类偏好评测，而这对榜单<strong>零增益</strong></td>
+          </tr>
+          <tr>
+            <th scope="row">模型选择</th>
+            <td>反复提交本身就是在测试集上选模型</td>
+            <td>需真正 held-out</td>
+            <td>提交次数越多，论文越不能声称 held-out <span class="tag tag-i">I</span></td>
+          </tr>
+          <tr>
+            <th scope="row">数据可发布性</th>
+            <td>只要合规即可用，无需可再分发 <span class="tag tag-f">F</span></td>
+            <td>可复现性偏好可获取的数据</td>
+            <td>「从官方短片反推 crop trajectory」这条线：对比赛完全可用，对论文可能<strong>不可发布</strong></td>
+          </tr>
+          <tr>
+            <th scope="row">归因 vs 绝对分</th>
+            <td>只看绝对分，集成与后处理照单全收</td>
+            <td>集成与操作点漂移会摧毁消融</td>
+            <td>具体伤害机制见 <a href="#s3">03</a></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ===== 02 ===== -->
+  <section id="s2">
+    <div class="sec-head"><span class="sec-n">02</span><h2>三种策略的独立评估</h2></div>
+    <p>前提、失败方式与转向信号已在<a href="#matrix">决策矩阵</a>中给出。此处只补矩阵放不下的判断。</p>
+
+    <div class="strat">
+      <div class="strat-item">
+        <div class="strat-name"><span class="k">A</span><span class="t">比赛主导</span></div>
+        <p>它的<strong>隐藏优点</strong>是：半决赛要交完整代码、模型、环境、推理脚本与技术报告 <span class="tag tag-f">F</span>，这<em>强制</em>你产出一个可复现系统，而这恰是论文最难补的工程债。它的<strong>隐藏代价</strong>是：技术报告是一次披露事件，其公开形式与是否进入某种 proceedings <span class="tag tag-v">V</span>，会反过来影响 ICLR 的 dual-submission 判定。不要把「先比赛」当成「没有公开风险」。</p>
+      </div>
+      <div class="strat-item">
+        <div class="strat-name"><span class="k">B</span><span class="t">论文主导</span></div>
+        <p>我认为它的前提 ② 最脆弱。论文需要的数据资产——多参考标注、可发布、覆盖 16:9 与 9:16 双画幅、含「内容好但构不出图」的反例——<strong>目前一条都不存在</strong>，而其建设周期长于任何模型改动。如果你选 B 却先去改架构，那是在错误的关键路径上。</p>
+      </div>
+      <div class="strat-item">
+        <div class="strat-name"><span class="k">C</span><span class="t">共同底座后分叉</span></div>
+        <p>我对它唯一的修正是：<strong>分叉点不是一个时间点，而是按资产类型分层的</strong>。代码、损失、阈值可以晚分叉；<strong>评测数据与评测协议必须在第 0 天就分叉</strong>，因为它是唯一不能事后补做的资产——事后补做等于你已经用赛方测试集塑形了模型，论文的独立性已被污染。C 的经典失败正是把数据也拖到 Gate 之后。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 03 ===== -->
+  <section id="s3">
+    <div class="sec-head"><span class="sec-n">03</span><h2>哪些模块共用，哪些必须从一开始分开</h2></div>
+
+    <h3>可以共用（低风险）</h3>
+    <p>解码／抽帧／长视频采样、缓存与 I/O；主体检测、分割、跟踪、显著性特征；镜头边界检测；目标画幅的几何换算与合法性裁剪；跨帧轨迹平滑的<em>实现</em>；数据来源与许可登记表；两阶段「检测 → 重构图」基线。</p>
+
+    <h3>必须从第 0 天分开维护</h3>
+    <ul class="list num">
+      <li><strong>评测数据集</strong>——论文永不依赖赛方测试集。这是本节唯一不可妥协的一条。</li>
+      <li><strong>评测协议与指标</strong>——比赛用单 GT IoU-F1；论文用多参考／acceptable-set／人类偏好。</li>
+      <li><strong>数据划分与 checkpoint 选择准则</strong>——论文需要独立 dev，且 dev 不得来自榜单反馈。</li>
+      <li><strong>随机种子与重复实验策略</strong>——比赛只要一个最好的，论文要多种子方差。</li>
+      <li><strong>后处理与操作点</strong>（阈值、预测数量控制、去重、超时降级）——纯榜单资产，进论文只能是附录。</li>
+    </ul>
+
+    <h3>榜单优化如何具体削弱论文可解释性</h3>
+    <ul class="list">
+      <li><strong>操作点混淆（最危险）。</strong>由 01 的推导可知，仅调节预测数量就能显著改变 F1，而这与方法无关。若「方法增益」里混进了操作点差异，hostile reviewer 一眼识破。<em>对策</em>：论文中所有对比必须给 PR 曲线或<strong>固定预测预算</strong>下的比较，禁止单点 F1。</li>
+      <li><strong>隐式测试集拟合。</strong>多次提交等于在测试集上做模型选择。</li>
+      <li><strong>鲁棒性工程反噬。</strong>为超时／显存做的跳帧、降分辨率、蒸馏会改变模型行为，使早期消融与后期模型不再可比。</li>
+      <li><strong>集成。</strong>榜单有效、论文近乎零贡献，且彻底破坏归因。若要用，必须在论文中完全隔离。</li>
+    </ul>
+
+    <h3>论文约束如何具体损害比赛得分</h3>
+    <ul class="list">
+      <li><strong>算力挤占（最实的一条）。</strong>多种子 × 消融矩阵会直接吃掉本可用于榜单迭代的 GPU 时间。<span class="tag tag-v">V</span> 取决于你的实际资源，本文不假设任何数值。</li>
+      <li><strong>数据自我设限。</strong>若为可发布性只用可再分发数据，你会主动放弃「官方短片反推」这条<em>合法但不可分发</em>的高价值监督来源，直接损失分数。</li>
+      <li><strong>架构自我设限。</strong>坚持 joint 可能不如「强检测器 + 强裁剪器」级联在榜单上得分高；榜单不看归因。</li>
+      <li><strong>标注人力。</strong>多参考标注不转化为任何名次。</li>
+    </ul>
+  </section>
+
+  <!-- ===== 04 ===== -->
+  <section id="s4">
+    <div class="sec-head"><span class="sec-n">04</span><h2>Hostile Reviewer 审查</h2></div>
+
+    <h3>判决：Reject（当前形态）</h3>
+    <div class="note risk">
+      <span class="lbl">评审口吻</span>
+      <p>“The task is spatio-temporal video grounding with an implicit query and a constrained box family (fixed aspect ratio, 3-DoF). The output signature — a temporal subset plus one box per selected frame — is identical to STVG. The paper does not show that joint modeling captures an interaction that a cascade cannot; the reported gain is consistent with a stronger backbone and a tuned operating point. Moreover, the central claim of jointness appears to be induced by the chosen F1 metric rather than by the task.”</p>
+      <p>最后一句是你最脆弱的地方，正是 <a href="#s1">01</a> 推出的那条：soft-Dice 使「丢弃构不出图的真高光帧」成为最优，评审会说这是<strong>指标的性质，不是世界的性质</strong>。</p>
+    </div>
+
+    <h3>三个最危险的最近邻</h3>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th scope="col">威胁</th><th scope="col">代表方向</th><th scope="col">评审会怎么说</th></tr></thead>
+        <tbody>
+          <tr>
+            <th scope="row">① STVG 与 RVOS</th>
+            <td>TubeDETR、STCAT、HC-STVG；Referformer、MTTR</td>
+            <td>输出签名同构。<strong>头号威胁</strong>——「换了个隐式 query 的 STVG」。</td>
+          </tr>
+          <tr>
+            <th scope="row">② 智能裁剪 + 时刻检索的级联</th>
+            <td>AutoFlip 类显著性裁剪、GAIC／VFN 类构图美学；配 Moment-DETR、QD-DETR、UniVTG 或视频摘要</td>
+            <td>「两个已解决子问题的拼接。」</td>
+          </tr>
+          <tr>
+            <th scope="row">③ 从专业剪辑学习 + 视频大模型直出</th>
+            <td>Learning to Cut by Watching Movies 一类的监督挖掘；以及直接 prompt 强视频 LLM 输出帧号与框</td>
+            <td>前者威胁你的数据贡献，后者是<strong>必问</strong>的零样本基线。</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>必须做的决定性对照</h3>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th scope="col">对照</th><th scope="col">设计</th><th scope="col">若结果为此，thesis 死亡</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">A · 同料级联</th><td>与 joint 模型<strong>同 backbone、同数据、同算力、同操作点</strong>的两阶段级联</td><td>joint ≈ cascade</td></tr>
+          <tr><th scope="row">B · Oracle 分解</th><td>分别给 joint 与 cascade oracle 时间选择再比构图；再给 oracle 构图比选择</td><td>joint 优势在 oracle 选择下消失 ⟹ 增益来自选择器而非联合性</td></tr>
+          <tr><th scope="row">C · Croppability-blind<br><em>最该先做，成本最低</em></th><td>从选择头切断构图可行性信号</td><td>分数无可测差异 ⟹ 交互效应不存在，立刻转向</td></tr>
+          <tr><th scope="row">D · 反事实子集<br><em>最有说服力</em></th><td>构造或筛选「内容最强但不可构图」的片段：主体被切边、双主体分离、越过画幅</td><td>joint 模型不改选 ⟹ 你声称的机制没在起作用</td></tr>
+          <tr><th scope="row">E · 指标外部效度</th><td>在<strong>人类偏好</strong>下重跑 A／C／D</td><td>交互只在 soft-Dice 下出现、人类偏好下消失 ⟹ 你研究的是指标不是任务</td></tr>
+          <tr><th scope="row">F · 零样本 VLM</th><td>强视频 LLM 直接输出 frame 与 [x, y, w]</td><td>打平 ⟹ 无方法贡献</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="tbl-cap">Control C 与 D 应排在任何架构工作之前，它们决定策略 B 是否有资格存在。</p>
+
+    <h3>九个候选方向的存活条件</h3>
+    <div class="note check">
+      <span class="lbl">重要限定</span>
+      <p><strong>我只看到这些方向的名称，没有看到内容。</strong> <span class="tag tag-v">V</span> 以下不猜测它们是什么，只给出「若名称暗示的方向属实，其存活条件是什么」。若与你的定义不符，以你的定义为准。</p>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th scope="col">候选</th><th scope="col">存活条件与判断</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">联合学习<br>高光 + 重构图</th><td>Control C／D／E 全部通过。当前是主线，但也是最脆弱的一条。</td></tr>
+          <tr><th scope="row">官方短片反推<br>crop trajectory</th><td><strong>我认为这是最有希望的一条</strong>——数据／监督贡献，不与 STVG 正面对撞。命门有二：版权与可发布性；标签噪声（官方短片同时含转场、变焦、调色，单应性估计误差会污染轨迹）与域偏移（专业拍摄 vs 通用测试内容）。</td></tr>
+          <tr><th scope="row">DisagreeEdit</th><td>若确为标注分歧／多参考方向，它<strong>恰好修补了本节最致命的批评</strong>（单 GT 评测不成立），且与比赛冲突最小。作为第二贡献价值高，作为单独主线偏轻。</td></tr>
+          <tr><th scope="row">Budgeted<br>EditCompose</th><td>与 01 的分式规划直接同构，<strong>复用价值最高</strong>；但也最容易被指为「这是指标的性质」。</td></tr>
+          <tr><th scope="row">Edit Critic</th><td>critic 与人类偏好的相关性须显著高于 IoU，且能作为可迁移评测工具输出。</td></tr>
+          <tr><th scope="row">ReasonEdit</th><td>高风险——推理链无法自证因果。必须有 trace-shuffled／trace-ablated 对照，否则必被质疑。</td></tr>
+          <tr><th scope="row">FineCut<br>StreamHighlight</th><td>名称信息不足以判断。StreamHighlight 若是在线设定，与比赛离线设定不冲突，但也不共享增益。</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ===== 05 ===== -->
+  <section id="s5">
+    <div class="sec-head"><span class="sec-n">05</span><h2>「未公开发表」条款与 ICLR 的潜在冲突</h2></div>
+    <p>附件已确认 <span class="tag tag-f">F</span>：规则写明作品须「未在其他比赛中获奖或公开发表」，且赛题原文<strong>未定义</strong>「作品」与「公开发表」的范围。以下全部按 <span class="tag tag-v">V</span> 处理。</p>
+
+    <div class="note risk">
+      <span class="lbl">结构性风险点 · 推断</span>
+      <p>ICLR 走 OpenReview，<strong>投稿在评审期是否即时公开可见，是本问题的枢纽</strong>——若公开，则「投稿」本身可能就是一次公开披露，而不是像传统会议那样在录用后才披露。当届政策必须查该年 CFP，我不替你断言。</p>
+      <p>同时注意<strong>双向风险</strong>：不只是「投稿是否影响参赛」，还有「参赛技术报告若被组委会公开，是否构成 ICLR 的 prior／concurrent publication」。</p>
+    </div>
+
+    <h3>需要向组委会书面确认 · 逐项分开问，不要合并</h3>
+    <ol class="ask">
+      <li><strong>「作品」的定义：</strong>是指提交的代码 + 模型 + 技术报告这一交付物，还是包括其背后的方法与思想？</li>
+      <li><strong>以下各项分别是否触发限制：</strong>(a) 向 ICLR 投稿本身；(b) 投稿在 OpenReview 上公开可见；(c) arXiv 预印本；(d) 论文被录用或正式发表；(e) 代码或权重开源。</li>
+      <li><strong>时间边界：</strong>限制适用于「参赛期间」、「至决赛结束」，还是「永久」？最早允许公开的日期是哪天？</li>
+      <li><strong>同底座、不同交付物：</strong>若论文使用不同训练数据、不同评测集、不同模型规模，是否仍被视为同一作品？</li>
+      <li><strong>反向问题：</strong>若在报名前已有 arXiv 预印本，是否影响参赛资格？</li>
+      <li><strong>论文中可写到什么程度：</strong>能否报告本赛事的分数与指标定义？能否描述测试集统计特征？能否展示测试集定性样例？（后两项我推断几乎必然不行，但需书面确认）</li>
+      <li><strong>技术报告的去向：</strong>是否会被组委会公开发布？以何种形式？是否进入某种 proceedings？</li>
+      <li><strong>获奖的附带条款：</strong>是否有排他性授权或知识产权条款，影响后续论文与开源？</li>
+    </ol>
+    <p class="tbl-cap">另附三个非公开性但同样紧急的技术问题，建议一并去问：|G|=0 与 |P|=0 的除零处理、重复帧计入方式、越界的判罚粒度。</p>
+
+    <h3>需要向 ICLR 官方或 PC 确认</h3>
+    <ol class="ask alt">
+      <li>当届 dual submission policy 是否将<strong>比赛技术报告</strong>视为 archival 的先前或并行发表？其 archival 判定标准是什么？</li>
+      <li>当届投稿在评审期是否<strong>公开可见</strong>于 OpenReview？可见时点？能否延迟公开？</li>
+      <li>arXiv 预印本政策与匿名期规定？</li>
+      <li>核心结果依赖一个<strong>不可公开的第三方测试集</strong>时，可接受程度与最低可复现性要求？</li>
+      <li>训练数据来源（广播或官方短片素材）的披露与许可要求？</li>
+    </ol>
+
+    <div class="note">
+      <span class="lbl">本节的边界</span>
+      <p>我不对上述任何一条给出法律或规则解释。它们是<strong>待获取的事实</strong>，不是可推断的结论。</p>
+    </div>
+  </section>
+
+  <!-- ===== 06 ===== -->
+  <section id="s6">
+    <div class="sec-head"><span class="sec-n">06</span><h2>明确建议、依赖的未知事实、反转规则</h2></div>
+
+    <div class="verdict">
+      <h4>建议</h4>
+      <p>采用策略 C 的「数据前移」变体：底座共用，但<strong>论文的评测数据与评测协议从第 0 天独立建设</strong>。</p>
+    </div>
+
+    <h3>执行顺序</h3>
+    <ul class="list num">
+      <li><strong>立刻并行启动两件事，其余一律等待：</strong>(a) 向组委会发出 05 的书面问询；(b) 跑 Control C（croppability-blind 消融）的最小 pilot。这两件事的答案共同决定后面所有资源分配，且都不需要先有架构决策。</li>
+      <li><strong>同期建设最小证据包：</strong>跑通官方格式与本地评测的基线，量出两个数——<strong>9:16 样本占比</strong>与<strong>高光帧稀疏度</strong>——它们决定时间选择与构图哪个是一阶项。</li>
+      <li><strong>论文的评测数据从第 0 天独立建设</strong>，绝不复用赛方测试集，且必须包含 Control D 的反事实子集。</li>
+      <li><strong>在条款澄清前，不做任何不可撤回的公开动作：</strong>不 arXiv、不开源、不提交 OpenReview。</li>
+      <li><strong>论文主线暂定为</strong>「从官方短片反推 crop trajectory（数据／监督贡献）+ 多参考评测协议」，<em>而非「联合学习」本身</em>；联合性降级为该框架下的一个受控发现，须由 Control D／E 支撑。</li>
+    </ul>
+
+    <h3>本建议依赖的、尚未获得的事实</h3>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th scope="col">未知事实</th><th scope="col">若反转，建议如何改变</th></tr></thead>
+        <tbody>
+          <tr>
+            <th scope="row">条款对 ICLR<br>OpenReview／arXiv<br>的解释</th>
+            <td><strong>从严</strong> ⟹ 立即切到 A：先比赛、论文延后一轮；arXiv 与开源全部冻结至最早允许日期，而论文的<em>数据线继续低强度推进</em>（它不触发公开）。<strong>不要因此放弃论文，只是改变时序。</strong></td>
+          </tr>
+          <tr>
+            <th scope="row">Control C 的<br>pilot 结果</th>
+            <td><strong>无交互效应</strong> ⟹ 「联合学习」作为 thesis 死亡；论文主线全部押在数据与评测协议贡献上，联合性从 claim 降为工程细节。</td>
+          </tr>
+          <tr>
+            <th scope="row">官方短片素材的<br>许可与可发布性</th>
+            <td><strong>不可用于论文发布</strong> ⟹ 该线降为纯比赛资产；论文主线改为 Edit Critic／DisagreeEdit 的评测贡献，因其可用可发布数据完成。</td>
+          </tr>
+          <tr>
+            <th scope="row">榜单提交频率<br>与分差结构</th>
+            <td><strong>提交极低频或分差极小</strong> ⟹ 比赛的工程边际收益骤降，C 的天平向论文倾斜，可提前 Gate。</td>
+          </tr>
+          <tr>
+            <th scope="row">算力与人力上限</th>
+            <td><strong>不足以支撑两条线</strong> ⟹ C 不成立，必须在 A 与 B 中二选一。此时按条款结果选：从严选 A；宽松且 Control C 通过则选 B。</td>
+          </tr>
+          <tr>
+            <th scope="row">9:16 占比与<br>高光稀疏度</th>
+            <td><strong>构图项主导</strong> ⟹ 复用价值上升（构图模块两边通吃），C 更划算。<strong>时间选择主导</strong> ⟹ 榜单收益集中在与论文关系较弱的阈值与召回工程上，A 与 B 的分歧加大。</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="note check">
+      <span class="lbl">最后一句坦白</span>
+      <p>本简报中唯一称得上「新信息」的是 <a href="#s1">01</a> 的指标闭式与 <code>IoU &gt; F1/2</code> 决策规则，但它依赖附件对指标的转述与官方评测脚本一致。<strong>请先读脚本验证</strong>；若脚本实现与转述不符，01 与 03 的若干推断需要重算。</p>
+    </div>
+  </section>
+
+  </main>
+</div>
+</div>
+
+<footer>
+  <div class="wrap">
+    <div class="foot-in">
+      <span>决策简报 · 参赛与 ICLR 双目标</span>
+      <span>事实边界取自附件第 2 部分 · 未写明处一律标记待核实</span>
+      <span>不含任何虚构的 deadline、榜单数据、算力或实验结果</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+(function(){
+  var root=document.documentElement, btn=document.getElementById('tt');
+  var stored=null;
+  try{ stored=localStorage.getItem('brief-theme'); }catch(e){}
+  if(stored==='dark'||stored==='light'){ root.setAttribute('data-theme',stored); }
+  btn.addEventListener('click',function(){
+    var current=root.getAttribute('data-theme');
+    if(!current){
+      var prefersDark=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches;
+      current=prefersDark?'dark':'light';
+    }
+    var next=current==='dark'?'light':'dark';
+    root.setAttribute('data-theme',next);
+    try{ localStorage.setItem('brief-theme',next); }catch(e){}
+  });
+})();
+</script>
+
+</body>
+</html>
