@@ -4,6 +4,7 @@
 *.mov
 *.webm
 *.wav
+*.flac
 *.m4a
 data_pipeline/cache/
 data_pipeline/raw/

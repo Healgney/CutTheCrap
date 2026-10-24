@@ -1,0 +1,415 @@
+<title>OnCue 课题导览</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@600;700&family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a non-linear-editor metaphor — a single reading column, with the timeline "workbench" as the one wide, tactile moment */
+:root{
+  --bg:#F2F4F6; --surface:#FFFFFF; --ink:#15202A; --muted:#5A6774; --line:#D4DBE2; --soft:#E7ECF0;
+  --accent:#2446C4; --gt:#0E8467; --pred:#B86E12; --warn:#BF332C; --pause:#7550B0; --shot:#6B7782;
+  --accent-wash:#E3E9FB; --warn-wash:#F8E4E2; --ok-wash:#DDF1EA;
+  --f-display:"Noto Serif SC","Songti SC","STSong",serif;
+  --f-body:"Noto Sans SC","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,"SFMono-Regular",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0E1317; --surface:#161E25; --ink:#E3E9EF; --muted:#94A2AE; --line:#2A3640; --soft:#1D2730;
+  --accent:#8099FF; --gt:#3CC59C; --pred:#EFA347; --warn:#F06C63; --pause:#B496F0; --shot:#93A0AC;
+  --accent-wash:#1E2A52; --warn-wash:#3A1D1C; --ok-wash:#15362C; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0E1317; --surface:#161E25; --ink:#E3E9EF; --muted:#94A2AE; --line:#2A3640; --soft:#1D2730;
+  --accent:#8099FF; --gt:#3CC59C; --pred:#EFA347; --warn:#F06C63; --pause:#B496F0; --shot:#93A0AC;
+  --accent-wash:#1E2A52; --warn-wash:#3A1D1C; --ok-wash:#15362C; color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15.5px;line-height:1.75;padding-inline:16px;padding-block:0 64px}
+.wrap{max-width:860px;margin:0 auto}
+h1,h2,h3{font-family:var(--f-display);text-wrap:balance;line-height:1.3;margin:0}
+h1{font-size:clamp(28px,5vw,40px)}
+h2{font-size:clamp(22px,3.4vw,27px)}
+h3{font-size:18px}
+p{margin:0}
+a{color:var(--accent)}
+code,.mono{font-family:var(--f-mono);font-size:.88em}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+nav.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);border-bottom:1px solid var(--line);margin-inline:-16px;padding:10px 16px}
+nav.top .in{max-width:860px;margin:0 auto;display:flex;gap:6px 16px;flex-wrap:wrap;font-size:13.5px}
+nav.top a{color:var(--muted);text-decoration:none}
+nav.top a:hover{color:var(--accent)}
+
+header.hero{padding-block:44px 28px;display:grid;gap:18px}
+.eyebrow{font-family:var(--f-mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.thesis{font-size:18px;max-width:62ch}
+.thesis b{color:var(--accent)}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{font-family:var(--f-mono);font-size:12px;border:1px solid var(--line);border-radius:99px;padding:3px 10px;color:var(--muted);background:var(--surface)}
+.chip.on{border-color:var(--accent);color:var(--accent)}
+
+section{padding-block:40px 8px;display:grid;gap:16px;scroll-margin-top:56px}
+.lede{color:var(--muted);max-width:65ch}
+
+/* Workbench */
+.bench{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px;display:grid;gap:14px}
+.presets{display:flex;flex-wrap:wrap;gap:8px}
+button{font:inherit;font-size:13.5px;cursor:pointer;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:6px;padding:6px 12px}
+button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--surface)}
+.tl{position:relative;display:grid;gap:6px}
+.track{display:grid;grid-template-columns:62px 1fr;align-items:center;gap:8px}
+.track .lab{font-size:12px;color:var(--muted);text-align:right}
+.lane{position:relative;height:30px;background:var(--soft);border-radius:4px;overflow:hidden}
+.lane.thin{height:18px}
+.blk{position:absolute;top:3px;bottom:3px;border-radius:3px;font-size:11px;line-height:24px;padding:0 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sent{background:var(--surface);border:1px solid var(--line);color:var(--muted)}
+.gtbar{background:var(--gt);opacity:.9}
+.predbar{background:var(--pred);opacity:.9}
+.tick{position:absolute;top:2px;bottom:2px;width:2px;border-radius:1px}
+.tick.sent{background:var(--accent);border:0}
+.tick.pause{background:var(--pause)}
+.tick.shot{background:var(--shot)}
+.ruler{position:relative;height:16px;font-family:var(--f-mono);font-size:10.5px;color:var(--muted)}
+.ruler span{position:absolute;transform:translateX(-50%)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px;color:var(--muted)}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+.sliders{display:grid;grid-template-columns:1fr 1fr;gap:10px 18px}
+.sliders label{font-size:13px;color:var(--muted);display:grid;gap:2px}
+.sliders output{font-family:var(--f-mono);color:var(--ink)}
+input[type=range]{width:100%;accent-color:var(--pred)}
+.snaprow{display:flex;align-items:center;gap:8px;font-size:14px}
+.readout{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.cell{border:1px solid var(--line);border-radius:8px;padding:8px 10px;display:grid;gap:2px;min-width:0}
+.cell .k{font-size:12px;color:var(--muted)}
+.cell .v{font-family:var(--f-mono);font-size:18px;font-variant-numeric:tabular-nums}
+.st{font-size:12.5px;border-radius:99px;padding:1px 8px;justify-self:start}
+.st.ok{background:var(--ok-wash);color:var(--gt)}
+.st.bad{background:var(--warn-wash);color:var(--warn)}
+.hear{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.hear .cell{font-size:14.5px}
+.cut{color:var(--warn);text-decoration:underline wavy;text-underline-offset:3px}
+.note{background:var(--accent-wash);border-radius:8px;padding:10px 12px;font-size:14.5px}
+.cands{font-family:var(--f-mono);font-size:12.5px;display:grid;gap:3px}
+
+/* Evidence */
+.tabs{display:flex;flex-wrap:wrap;gap:6px}
+.pillar{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:18px;display:grid;gap:12px}
+.pillar .src{font-size:13px;color:var(--muted)}
+.bars{display:grid;gap:7px}
+.bar{display:grid;grid-template-columns:minmax(90px,160px) 1fr 52px;gap:8px;align-items:center;font-size:13px}
+.bar .tr{height:12px;background:var(--soft);border-radius:3px;position:relative;overflow:hidden}
+.bar .fl{position:absolute;inset:0 auto 0 0;border-radius:3px;background:var(--accent)}
+.bar .fl.w{background:var(--warn)}
+.bar .fl.g{background:var(--gt)}
+.bar .n{font-family:var(--f-mono);font-variant-numeric:tabular-nums;text-align:right}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.two>div{min-width:0}
+.two h4{margin:0 0 4px;font-size:13px;color:var(--muted);font-weight:500}
+.scroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{text-align:left;padding:7px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-weight:500;color:var(--muted);font-size:13px}
+td.num{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.x{color:var(--warn);font-family:var(--f-mono)}
+
+/* Metric trap */
+.trap{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px;display:grid;gap:12px}
+.preds{display:flex;gap:4px;flex-wrap:wrap}
+.pd{width:30px;height:30px;border-radius:5px;display:grid;place-items:center;font-family:var(--f-mono);font-size:12px;border:1px solid var(--line);color:var(--muted)}
+.pd.in.hit{background:var(--gt);border-color:var(--gt);color:var(--surface)}
+.pd.in.miss{background:var(--warn);border-color:var(--warn);color:var(--surface)}
+
+/* Risks & gates */
+.gates{display:grid;gap:0;border-left:2px solid var(--line);margin-left:6px}
+.gate{position:relative;padding:4px 0 16px 20px;display:grid;gap:2px}
+.gate::before{content:"";position:absolute;left:-7px;top:10px;width:12px;height:12px;border-radius:50%;background:var(--surface);border:2px solid var(--accent)}
+.gate .d{font-family:var(--f-mono);font-size:12.5px;color:var(--accent)}
+.gate .f{font-size:14px;color:var(--muted)}
+
+/* Reading list */
+.reads{display:grid;gap:8px}
+.read{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:start;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:12px 14px}
+.read input{width:18px;height:18px;margin-top:4px;accent-color:var(--gt)}
+.read .t{font-weight:500}
+.read .w{font-size:14px;color:var(--muted)}
+.read .h{font-family:var(--f-mono);font-size:12.5px;color:var(--muted);white-space:nowrap}
+.read.done .t{text-decoration:line-through;color:var(--muted)}
+.prog{font-family:var(--f-mono);font-size:13px;color:var(--muted)}
+dl{display:grid;grid-template-columns:minmax(120px,190px) 1fr;gap:8px 16px;margin:0}
+dt{font-family:var(--f-mono);font-size:13.5px}
+dd{margin:0;color:var(--muted);font-size:14.5px}
+.foot{font-size:13px;color:var(--muted);padding-top:40px}
+
+@media (max-width:640px){
+  .readout{grid-template-columns:1fr 1fr}
+  .sliders,.hear,.two{grid-template-columns:1fr}
+  .track{grid-template-columns:44px 1fr}
+  .blk.sent{font-size:0}
+  dl{grid-template-columns:1fr}
+  dd{margin-bottom:6px}
+  .bar{grid-template-columns:96px 1fr 44px}
+}
+@media (prefers-reduced-motion:no-preference){.predbar,.fl{transition:left .25s,width .25s}}
+</style>
+
+<nav class="top"><div class="in">
+  <a href="#claim">主张</a><a href="#bench">切点实验台</a><a href="#evidence">五条依据</a><a href="#trap">指标陷阱</a><a href="#risks">风险</a><a href="#gates">关卡</a><a href="#start">入门</a><a href="#terms">术语</a>
+</div></nav>
+
+<div class="wrap">
+<header class="hero" id="claim">
+  <span class="eyebrow">CutTheCrap · 论文暂名 OnCue · CVPR 2027</span>
+  <h1>剪短视频时，切点应该“选”出来，而不是“回归”出来</h1>
+  <p class="thesis">把长视频剪成短 clip 时，起止点不该回归成任意时间戳，而应该从<b>句末、停顿、镜头切换</b>这些候选点里挑；并且，这个好处不能被“回归后吸附到最近句末”的后处理复现。</p>
+  <div class="chips">
+    <span class="chip on">进度：等待 P1 下载探测</span>
+    <span class="chip">G0 候选覆盖率 · 10-17</span>
+    <span class="chip">G2 主表 · 11-02</span>
+    <span class="chip">提交 · 11-16 AoE</span>
+  </div>
+</header>
+
+<section id="bench">
+  <h2>切点实验台</h2>
+  <p class="lede">一段播客转写（示例数据，非真实视频）。绿色是 GT clip：从提问到笑点结束。拖动橙色预测的起止点，看 tIoU 和“观众听到什么”是否一致。</p>
+  <div class="bench">
+    <div class="presets" role="group" aria-label="预设">
+      <button id="pA" aria-pressed="true">臂 A · 连续回归</button>
+      <button id="pC" aria-pressed="false">臂 C · 回归 + 吸附</button>
+      <button id="pD" aria-pressed="false">臂 D · 候选选择</button>
+    </div>
+    <div class="tl" id="tl">
+      <div class="track"><span class="lab">镜头</span><div class="lane thin" id="lnShot"></div></div>
+      <div class="track"><span class="lab">转写</span><div class="lane" id="lnSent"></div></div>
+      <div class="track"><span class="lab">候选点</span><div class="lane thin" id="lnCand"></div></div>
+      <div class="track"><span class="lab">GT</span><div class="lane" id="lnGt"></div></div>
+      <div class="track"><span class="lab">预测</span><div class="lane" id="lnPred"></div></div>
+      <div class="track"><span class="lab"></span><div class="ruler" id="ruler"></div></div>
+    </div>
+    <div class="legend">
+      <span><i style="background:var(--accent)"></i>句子边界</span>
+      <span><i style="background:var(--pause)"></i>停顿 ≥0.3 s</span>
+      <span><i style="background:var(--shot)"></i>镜头切换</span>
+      <span><i style="background:var(--gt)"></i>GT</span>
+      <span><i style="background:var(--pred)"></i>预测</span>
+    </div>
+    <div class="sliders">
+      <label for="sS">起点 <output id="oS"></output><input type="range" id="sS" min="0" max="32" step="0.1"></label>
+      <label for="sE">终点 <output id="oE"></output><input type="range" id="sE" min="0" max="32" step="0.1"></label>
+    </div>
+    <label class="snaprow" for="snap"><input type="checkbox" id="snap"> 吸附到 ±3 秒内最近的候选点（臂 C 的做法）</label>
+    <div class="readout">
+      <div class="cell"><span class="k">tIoU（对 GT）</span><span class="v" id="rIou"></span></div>
+      <div class="cell"><span class="k">起点误差</span><span class="v" id="rDs"></span><span class="st" id="bS"></span></div>
+      <div class="cell"><span class="k">终点误差</span><span class="v" id="rDe"></span><span class="st" id="bE"></span></div>
+      <div class="cell"><span class="k">bF1@1s（单 clip）</span><span class="v" id="rBf"></span></div>
+    </div>
+    <div class="hear">
+      <div class="cell"><span class="k">观众听到的开头</span><span id="hStart"></span></div>
+      <div class="cell"><span class="k">观众听到的结尾</span><span id="hEnd"></span></div>
+    </div>
+    <div class="note" id="explain"></div>
+  </div>
+</section>
+
+<section id="evidence">
+  <h2>五条依据</h2>
+  <p class="lede">每条都来自 <code>docs/litreview/long-to-short/deep/</code> 里全文读过的论文。点选查看：它证明了什么、对我们意味着什么、它没做什么。</p>
+  <div class="tabs" role="tablist" id="ptabs"></div>
+  <div id="pbody"></div>
+</section>
+
+<section id="trap">
+  <h2>指标陷阱：Repurpose-10K 只算精度</h2>
+  <p class="lede">原仓库 <code>utils/metrics.py: calculate_tiou</code> 统计的是“预测里命中 GT 的比例”，不算召回。下面是一个示意视频：10 个 GT clip，模型按置信度排出 10 个预测。拖动预测数量 K。</p>
+  <div class="trap">
+    <label for="sK" style="font-size:14px">预测数量 K = <output id="oK" class="mono"></output>（原配置 0.3 个/分钟 × 19 分钟 ≈ 6）
+      <input type="range" id="sK" min="1" max="10" step="1" value="6" style="accent-color:var(--accent)"></label>
+    <div class="preds" id="preds" aria-label="按置信度排序的预测，绿色命中，红色未命中"></div>
+    <div class="bars" id="trapBars"></div>
+    <p class="note">K=1 时精度最高、召回只有 10%。原指标会奖励“少报”。数据里实际每 10 分钟有 5.3 个 clip，而原配置只报约 3 个。我们的评测台会同时报召回、F1 和两种预测预算。</p>
+  </div>
+</section>
+
+<section id="risks">
+  <h2>哪里还不扎实</h2>
+  <div class="scroll"><table>
+    <thead><tr><th>风险</th><th>为什么危险</th><th>防线</th></tr></thead>
+    <tbody>
+      <tr><td>“这不就是后处理吗”</td><td>回归后吸附到最近句末，可能拿走大部分收益</td><td>臂 C 专门对照；打不过就改写成分析型论文（G2）</td></tr>
+      <tr><td>GT 本身偏向句末</td><td>标签来自 OpusClip 的候选再经用户修剪；候选方法可能只是在模仿同一个工具</td><td>G0 先量化；AntHighlight（人工标注）跨域验证；人评不依赖 GT</td></tr>
+      <tr><td>概念邻居已存在</td><td>PodReels、Spotify 播客预览已占“挑自包含片段”的概念</td><td>不主张“自包含”，只主张边界输出空间和评测修正</td></tr>
+      <tr><td>只有 32 天</td><td>视频失效、复现不出 11.57 都会拖慢</td><td>每个关卡都有改道方案（06 计划 §4）</td></tr>
+    </tbody>
+  </table></div>
+  <p>真正的悬念只有一个：<b>臂 D 能不能明显打赢臂 C</b>。整个时间线都是为了尽早回答它。</p>
+</section>
+
+<section id="gates">
+  <h2>关卡时间线</h2>
+  <div class="gates">
+    <div class="gate"><span class="d">10-17 · G0</span><b>候选覆盖率</b><span class="f">GT 起止点落在候选点 ±1 秒内 ≥ 80%，且同密度随机点 ≤ 50%。不通过：本轮不投 CVPR，转 ACL ARR。</span></div>
+    <div class="gate"><span class="d">10-24 · G1</span><b>臂 A 复现</b><span class="f">原始划分上平均 tIoU 接近 11.57（视频失效可能带来 ±1.5 的偏差）。</span></div>
+    <div class="gate"><span class="d">11-02 · G2</span><b>主表</b><span class="f">D 在 bF1@1s、F1@0.7、句中切断率上显著优于 C。D ≈ C：改写为分析型论文。</span></div>
+    <div class="gate"><span class="d">11-06 · G3</span><b>人评</b><span class="f">150 对 × 3 名评分者；句中切断率与人类偏好方向一致。</span></div>
+    <div class="gate"><span class="d">11-10 / 11-16</span><b>Enrollment / 提交</b><span class="f">补充材料截止 11-23。</span></div>
+  </div>
+</section>
+
+<section id="start">
+  <h2>入门清单</h2>
+  <p class="lede">先读中文深读笔记，再读原文。勾选会保存在你的浏览器里。</p>
+  <div class="prog" id="prog"></div>
+  <div class="reads" id="reads"></div>
+</section>
+
+<section id="terms">
+  <h2>术语</h2>
+  <dl>
+    <dt>tIoU</dt><dd>预测片段与真实片段的时间重叠 ÷ 合并长度；1 表示完全重合。实验台里它对“切在半句”几乎不敏感。</dd>
+    <dt>bF1@±k s</dt><dd>起点、终点分别在真实边界 ±k 秒内就算对，再算 F1。直接衡量切得准不准。</dd>
+    <dt>候选切点</dt><dd>句末、停顿、镜头切换等允许下刀的位置。臂 D 只在这些点里选。</dd>
+    <dt>吸附（snap）</dt><dd>回归出时间后，挪到最近的候选点。只看距离，不看挪到哪一边更好。</dd>
+    <dt>soft-NMS</dt><dd>预测重叠时降低次优片段的分数而不是删除，避免输出一堆几乎一样的片段。</dd>
+    <dt>leave-one-out 上限</dt><dd>把一位人类标注者当作模型，用其他人当参考打分，得到该指标下的天花板。</dd>
+    <dt>随机基线</dt><dd>按 GT 时长分布随机放片段。赢不了它，说明指标或方法有问题。</dd>
+  </dl>
+</section>
+
+<p class="foot">数据来源：docs/litreview/long-to-short/（80 篇调研）、eval/paper/splits/AUDIT.md、Repurpose 仓库源码。实验台与指标陷阱中的转写和预测为示意数据。</p>
+</div>
+
+<script>
+(function(){
+const T=32, GT=[3.4,21.0], SHOTS=[9.7,13.0,17.1,26.7];
+const SENTS=[
+ {a:0.0,b:3.0,toks:["刚才","说到的","那件事","先放","一放。"]},
+ {a:3.4,b:9.6,toks:["很多人","问我，","创业","第一年","最容易","犯的错","是什么？"]},
+ {a:9.9,b:16.8,toks:["我的","答案是：","大家","都低估了","现金流，","而不是","低估了","产品。"]},
+ {a:17.2,b:21.0,toks:["（笑声）","真的，","我自己","就踩过","这个坑。"]},
+ {a:21.6,b:26.5,toks:["好，","下一个","问题","来自","评论区。"]},
+ {a:26.8,b:32.0,toks:["有人问","远程办公","到底","行不行。"]}];
+const WORDS=[];
+SENTS.forEach((s,i)=>{const n=s.toks.reduce((x,t)=>x+t.length,0);let t=s.a;
+  s.toks.forEach(tok=>{const d=(s.b-s.a)*tok.length/n;WORDS.push({w:tok,a:t,b:t+d,s:i});t+=d;});});
+const CANDS=[];
+SENTS.forEach(s=>{CANDS.push({t:s.a,k:"sent"});CANDS.push({t:s.b,k:"sent"});});
+for(let i=0;i<SENTS.length-1;i++){const g=SENTS[i+1].a-SENTS[i].b;if(g>=0.3)CANDS.push({t:+((SENTS[i].b+SENTS[i+1].a)/2).toFixed(2),k:"pause"});}
+SHOTS.forEach(t=>CANDS.push({t,k:"shot"}));
+const pct=t=>(t/T*100)+"%";
+const $=id=>document.getElementById(id);
+
+// static lanes
+SHOTS.forEach(t=>{const d=document.createElement("div");d.className="tick shot";d.style.left=pct(t);$("lnShot").appendChild(d);});
+SENTS.forEach(s=>{const d=document.createElement("div");d.className="blk sent";d.style.left=pct(s.a);d.style.width=pct(s.b-s.a);d.textContent=s.toks.join("");d.title=s.toks.join("");$("lnSent").appendChild(d);});
+CANDS.forEach(c=>{const d=document.createElement("div");d.className="tick "+c.k;d.style.left=pct(c.t);$("lnCand").appendChild(d);});
+const g=document.createElement("div");g.className="blk gtbar";g.style.left=pct(GT[0]);g.style.width=pct(GT[1]-GT[0]);$("lnGt").appendChild(g);
+const pb=document.createElement("div");pb.className="blk predbar";$("lnPred").appendChild(pb);
+for(let t=0;t<=T;t+=4){const s=document.createElement("span");s.style.left=pct(t);s.textContent="00:"+String(t).padStart(2,"0");$("ruler").appendChild(s);}
+
+const snapT=t=>{let best=null,bd=3.0001;CANDS.forEach(c=>{const d=Math.abs(c.t-t);if(d<bd){bd=d;best=c.t;}});return best===null?t:best;};
+function where(t){
+  for(const s of SENTS){if(t>s.a+0.15&&t<s.b-0.15)return{ok:false,txt:"句中"};}
+  for(const s of SENTS){if(Math.abs(t-s.a)<=0.15||Math.abs(t-s.b)<=0.15)return{ok:true,txt:"句子边界"};}
+  return{ok:true,txt:"停顿处"};}
+function heard(s,e){
+  const inW=WORDS.filter(w=>w.b>s&&w.a<e);
+  if(!inW.length)return["（空）","（空）"];
+  const fmt=w=>{const part=(w.a<s-0.05)||(w.b>e+0.05);return part?'<span class="cut" title="这个词被切断">'+w.w+'</span>':w.w;};
+  const head=inW.slice(0,4).map(fmt).join("");const tail=inW.slice(-4).map(fmt).join("");
+  return[head+"……","……"+tail];}
+
+let mode="A";
+const PRESET={A:[3.9,18.8],C:[3.9,18.8],D:[3.4,21.0]};
+const EXPL={
+ A:"臂 A 的起点 3.9 s 切掉了“很多人”，终点 18.8 s 停在笑点前半句。tIoU 仍有 0.85，看起来不错，但观众听到的是断句。",
+ C:"臂 C 把同样的预测吸附到最近的候选点：起点干净地回到 3.4 s，终点却吸到了更近的 17.2 s，把“我自己就踩过这个坑”整句剪掉了。切点变干净了，tIoU 反而降到 0.78。吸附只看距离，不知道哪一边才是完整的结尾。",
+ D:"臂 D 在候选点对上打分（示意分数）：(3.4, 21.0) 2.31 · (3.4, 16.8) 2.05 · (9.9, 21.0) 1.62。它学的是“选哪一个候选”，所以能越过更近的 17.2 s，选中笑点结束的 21.0 s。",
+ free:"自由拖动中。试试把终点放在 19–20 s 之间：tIoU 变化很小，但结尾听到的始终是被切断的半句话。"};
+
+function render(){
+  let s=+$("sS").value,e=+$("sE").value;
+  if(e<s+1){e=s+1;}
+  if($("snap").checked){s=snapT(s);e=snapT(e);}
+  $("oS").textContent=s.toFixed(1)+" s";$("oE").textContent=e.toFixed(1)+" s";
+  pb.style.left=pct(s);pb.style.width=pct(Math.max(0.1,e-s));
+  const inter=Math.max(0,Math.min(e,GT[1])-Math.max(s,GT[0])),uni=(e-s)+(GT[1]-GT[0])-inter;
+  $("rIou").textContent=(inter/uni).toFixed(2);
+  const ds=s-GT[0],de=e-GT[1];
+  $("rDs").textContent=(ds>=0?"+":"")+ds.toFixed(1)+" s";$("rDe").textContent=(de>=0?"+":"")+de.toFixed(1)+" s";
+  const ws=where(s),we=where(e);
+  $("bS").textContent=ws.txt;$("bS").className="st "+(ws.ok?"ok":"bad");
+  $("bE").textContent=we.txt;$("bE").className="st "+(we.ok?"ok":"bad");
+  const hit=(Math.abs(ds)<=1?1:0)+(Math.abs(de)<=1?1:0);
+  $("rBf").textContent=(hit/2).toFixed(2);
+  const h=heard(s,e);$("hStart").innerHTML=h[0];$("hEnd").innerHTML=h[1];
+  $("explain").textContent=EXPL[mode];
+}
+function setMode(m){mode=m;["A","C","D"].forEach(k=>$("p"+k).setAttribute("aria-pressed",k===m));
+  $("sS").value=PRESET[m][0];$("sE").value=PRESET[m][1];$("snap").checked=(m==="C");render();}
+["A","C","D"].forEach(k=>$("p"+k).addEventListener("click",()=>setMode(k)));
+["sS","sE","snap"].forEach(id=>$(id).addEventListener("input",()=>{mode="free";["A","C","D"].forEach(k=>$("p"+k).setAttribute("aria-pressed","false"));render();}));
+setMode("A");
+
+// Evidence pillars
+const P=[
+ {tab:"1 边界影响人的感受",title:"随机边界让 Hook 率从 0.71 跌到 0.28",src:"HIVE · EMNLP 2025 Industry · 短剧广告剪辑 · deep/A02.md",link:"https://arxiv.org/abs/2507.02790",
+  bars:{max:1,rows:[["人工剪辑 Hook",0.87,"g"],["HIVE 完整 Hook",0.71,""],["边界随机 Hook",0.28,"w"],["HIVE 完整 Suspense",0.73,""],["边界随机 Suspense",0.30,"w"]],fmt:v=>v.toFixed(2)},
+  mean:"文献里最直接的证据：边界选择本身显著改变人评质量，而不只是指标上的小数点。",
+  lack:"边界是场景级、靠大模型提示词挑；没有和回归对比，也没有边界精度指标。"},
+ {tab:"2 输出接口很关键",title:"只换时间的输出方式，精度能差一倍以上",src:"How Should Video LLMs Output Time? · 2026 · Charades-STA mIoU · deep/B05.md",link:"https://arxiv.org/abs/2604.08966",
+  bars:{max:50,rows:[["0.5B 文字数字",16.2,"w"],["8B 文字数字",27.5,"w"],["0.5B 连续分布头",43.4,"g"]],fmt:v=>v.toFixed(1)},
+  mean:"社区已承认“输出接口”是值得单独做受控实验的变量；我们的问题定义因此有合法性，论文结构也照它写。",
+  lack:"三个臂都输出自由时间，没有“从候选点里选”。我们补的正是第四个臂。"},
+ {tab:"3 候选+解码有先例",title:"候选切点 + 动态规划，Boundary F1 提升 7 个点左右",src:"AntPivot · 金融直播 · ±5 s 容忍窗 · deep/A09.md",link:"https://arxiv.org/abs/2206.04888",
+  bars:{max:60,rows:[["起点 · 阈值解码",36.8,"w"],["起点 · DP 解码",44.5,"g"],["终点 · 阈值解码",42.2,"w"],["终点 · DP 解码",48.9,"g"]],fmt:v=>v.toFixed(1)},
+  mean:"在长语音视频上，以句子为候选、结构化解码能带来可观的边界收益。它是臂 D 的原型。",
+  lack:"没有和连续回归对比；±5 s 下 F1 仍低于 50；片段平均 212 s、只有金融域。"},
+ {tab:"4 评测测不出边界",title:"四个独立事实：现有评测分辨不出切得好不好",src:"A01 · AUDIT.md · B21 MEDit-Bench · B17 Otani 2019",link:"https://arxiv.org/abs/1903.11328",
+  table:[["Repurpose-10K 最好模型平均 tIoU","11.57（@0.9 仅 1.57），且指标只算精度"],["Repurpose-10K 划分泄漏","train∩test 404 个视频，48 个完全重复样本"],["MEDit-Bench 人类 leave-one-out R@0.7","0.033：专业剪辑师之间都几乎对不上"],["Otani 2019，TVSum F1","随机 0.57–0.58；已发表方法 0.36–0.64；人类 0.54"]],
+  mean:"我们的容忍窗边界 F1、句中切断率、固定预算下的召回，是针对已有缺陷的修补，不是凭空发明的指标。",
+  lack:"这些工作指出了问题，但没有一个提出针对“边界质量”的指标。"},
+ {tab:"5 空白已核对",title:"7 篇全文读过的相关论文，都没有候选选择臂",src:"deep/regression_vs_candidate_final.md",link:"",
+  table:[["TimeLens","文本连续时间戳"],["Time-R1","文本连续时间戳"],["How Should Video LLMs Output Time?","三种自由时间输出"],["Vidi / VUE-TR","生成时间范围（分段只用于造数据）"],["MEDit-Bench","输出秒数列表"],["Otani 2019","候选段 + 背包，但没和回归比"],["AntPivot","候选 + DP，但没和回归比"]],
+  mean:"“同骨干、同数据、只换边界输出方式”的受控对比是可声称的实证贡献。",
+  lack:"这是“没找到”，不是“证明不存在”。论文里写 to our knowledge，并保留检索记录。"}];
+function pillar(i){
+  document.querySelectorAll("#ptabs button").forEach((b,j)=>b.setAttribute("aria-pressed",j===i));
+  const p=P[i];let body="";
+  if(p.bars){body='<div class="bars">'+p.bars.rows.map(r=>'<div class="bar"><span>'+r[0]+'</span><span class="tr"><span class="fl '+r[2]+'" style="width:'+(r[1]/p.bars.max*100)+'%"></span></span><span class="n">'+p.bars.fmt(r[1])+'</span></div>').join("")+'</div>';}
+  if(p.table){body='<div class="scroll"><table><tbody>'+p.table.map(r=>'<tr><td>'+r[0]+'</td><td>'+r[1]+'</td></tr>').join("")+'</tbody></table></div>';}
+  $("pbody").innerHTML='<article class="pillar"><h3>'+p.title+'</h3><p class="src">'+p.src+(p.link?' · <a href="'+p.link+'" target="_blank" rel="noopener">原文</a>':'')+'</p>'+body+
+   '<div class="two"><div><h4>对我们意味着</h4><p>'+p.mean+'</p></div><div><h4>它没做的事</h4><p>'+p.lack+'</p></div></div></article>';}
+P.forEach((p,i)=>{const b=document.createElement("button");b.textContent=p.tab;b.setAttribute("role","tab");b.addEventListener("click",()=>pillar(i));$("ptabs").appendChild(b);});
+pillar(0);
+
+// Metric trap
+const HITS=[1,1,0,1,1,0,0,1,0,0],G=10;
+HITS.forEach((h,i)=>{const d=document.createElement("div");d.className="pd";d.dataset.h=h;d.textContent=i+1;$("preds").appendChild(d);});
+function trap(){
+  const K=+$("sK").value;$("oK").textContent=K;
+  document.querySelectorAll(".pd").forEach((d,i)=>{d.className="pd"+(i<K?(" in "+(d.dataset.h==="1"?"hit":"miss")):"");});
+  const h=HITS.slice(0,K).reduce((a,b)=>a+b,0),P_=h/K,R=h/G,F=P_+R?2*P_*R/(P_+R):0;
+  $("trapBars").innerHTML=[["原指标（精度）",P_,""],["召回",R,"w"],["F1",F,"g"]].map(r=>'<div class="bar"><span>'+r[0]+'</span><span class="tr"><span class="fl '+r[2]+'" style="width:'+(r[1]*100)+'%"></span></span><span class="n">'+r[1].toFixed(2)+'</span></div>').join("");}
+$("sK").addEventListener("input",trap);trap();
+
+// Reading list
+const R=[
+ ["Repurpose-10K（AAAI 2025）","任务定义、标签来源、Table 2 人评、Table 3；同时打开 utils/metrics.py 第 82–111 行","1.5 h","https://arxiv.org/abs/2412.08879"],
+ ["AntPivot","第 3 节候选点 + DP 解码，Table 5 解码对比：臂 D 的原型","1 h","https://arxiv.org/abs/2206.04888"],
+ ["How Should Video LLMs Output Time?","第 3 节三种输出范式、Table 2：照它的“只改一个变量”写我们的论文","1 h","https://arxiv.org/abs/2604.08966"],
+ ["HIVE","Table 2 消融与 Hook/Suspense 人评设计","1 h","https://arxiv.org/abs/2507.02790"],
+ ["Otani 2019","随机化检验：审稿人会用同样逻辑攻击你","1 h","https://arxiv.org/abs/1903.11328"],
+ ["练习 · 亲眼看 GT 切在哪","test 集第一个视频，clip 8.48–26.78 s 与 154.36–221.7 s：起止是不是句子边界？","20 min","https://www.youtube.com/watch?v=AxwsdxOqQaU&t=8"],
+ ["练习 · 手动迷你 G0","从 test.json 挑 10 个 clip，逐个记“句末 / 停顿 / 句中”","40 min",""],
+ ["练习 · 读懂 30 行指标代码","calculate_tiou：每个视频只报 1 个 clip 会怎样？","15 min",""]];
+let done={};try{done=JSON.parse(localStorage.getItem("oncue-reads")||"{}");}catch(e){done={};}
+function reads(){
+  $("reads").innerHTML="";let n=0;
+  R.forEach((r,i)=>{const id="rd"+i;if(done[i])n++;
+    const el=document.createElement("label");el.className="read"+(done[i]?" done":"");el.htmlFor=id;
+    el.innerHTML='<input type="checkbox" id="'+id+'"'+(done[i]?" checked":"")+'><span><span class="t">'+(r[3]?'<a href="'+r[3]+'" target="_blank" rel="noopener">'+r[0]+'</a>':r[0])+'</span><br><span class="w">'+r[1]+'</span></span><span class="h">'+r[2]+'</span>';
+    el.querySelector("input").addEventListener("change",ev=>{done[i]=ev.target.checked;try{localStorage.setItem("oncue-reads",JSON.stringify(done));}catch(e){}reads();});
+    $("reads").appendChild(el);});
+  $("prog").textContent="已完成 "+n+" / "+R.length;}
+reads();
+})();
+</script>

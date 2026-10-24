@@ -1,6 +1,6 @@
 # 服务器实验交接：CVPR 2027「边界是离散决策」
 
-> 写于 2026-10-15。研究设计见 [`06-cvpr2027-plan.md`](06-cvpr2027-plan.md)，本文只写**怎么在 GPU 服务器上做**。
+> 写于 2026-10-15。研究设计见 [`06-cvpr2027-plan.md`](06-cvpr2027-plan.md)，数据来源与获取工具见 [`08-data-preparation.md`](08-data-preparation.md)，本文只写**怎么在 GPU 服务器上做**。
 > 读者有两类：服务器上的 Claude Code（执行）和你本人（审关卡）。每个阶段都写明输入、输出、验收标准和"停下来问人"的条件。
 > 标注沿用仓库约定：`[F]` 已确认 · `[I]` 推断 · `[V]` 待核实。所有阈值都是**起始值**，改动要写进报告。
 
@@ -42,7 +42,7 @@
 export L2S_REPO=...        # 本仓库在服务器上的路径
 export L2S_DATA=...        # 大文件根目录（按需计费的存储）
 export L2S_VIDEOS=$L2S_DATA/videos      # {youtube_id}.mp4，360p
-export L2S_AUDIO=$L2S_DATA/audio        # {youtube_id}.wav，16 kHz 单声道
+export L2S_AUDIO=$L2S_DATA/audio        # {youtube_id}.flac，16 kHz 单声道
 export L2S_ASR=$L2S_DATA/asr            # {youtube_id}.json，WhisperX 词级输出
 export L2S_FEATS=$L2S_DATA/features     # clip/ pann/ text/ 三个子目录，{youtube_id}.npy
 export L2S_CKPT=$L2S_DATA/checkpoints
@@ -88,7 +88,7 @@ reports/<阶段>/            # 每阶段的 summary.md + metrics.json + 小图�
 - 从 `eval/paper/splits/test_clean_ids.txt` 随机取 20 个（seed=0），下载命令：
 
 ```bash
-yt-dlp -f "bv*[height<=360]+ba/b[height<=360]" --merge-output-format mp4 \
+yt-dlp -f "bv*[height<=360]+ba/b[height<=360]" -S "vcodec:h264,res:360" --merge-output-format mp4 \
   --write-auto-subs --sub-langs "en.*" --sub-format json3 \
   -o "$L2S_VIDEOS/%(id)s.%(ext)s" --sleep-requests 1 --retries 3 \
   -a probe_ids.txt  ${COOKIES:+--cookies "$COOKIES"}
@@ -101,7 +101,8 @@ yt-dlp -f "bv*[height<=360]+ba/b[height<=360]" --merge-output-format mp4 \
 ### P2 全量下载（P1 通过后开始，后台跑，持续数天）
 
 - **范围：全部 8,399 个视频**（覆盖原始划分，才能和 11.57 对比）。按优先级分批：**clean test → clean val → 原始 test/val 剩余 → train**。
-- 每个视频下载后立即导出音频：`ffmpeg -i X.mp4 -ac 1 -ar 16000 $L2S_AUDIO/X.wav`。
+- 每个视频下载后立即导出音频：`ffmpeg -i X.mp4 -ac 1 -ar 16000 -c:a flac $L2S_AUDIO/X.flac`（FLAC 无损，体积约为 WAV 的一半）。
+- 视频优先 H.264（上面的 `-S` 参数）：AV1/VP9 在 CPU 上解码慢数倍，而 P5 抽帧的瓶颈就是解码。
 - 维护 `reports/P2/status.csv`：`youtube_id, split, status, duration_s, error`，每天提交一次。
 - **验收：** clean test 完成率 ≥ 80% 才能做 G0；低于 80% 停下问人。
 
